@@ -36,7 +36,7 @@ const BarcodeScanner = ({ open, onClose, onScan }: BarcodeScannerProps) => {
       await scannerRef.current.start(
         selectedCameraId,
         { fps: 10, qrbox: { width: 250, height: 150 } },
-        async (decodedText) => { onScan(decodedText); await stopScanner(); onClose(); },
+        async (decodedText) => { playBeep(); onScan(decodedText); await stopScanner(); onClose(); },
         () => {}
       );
       startedRef.current = true;
