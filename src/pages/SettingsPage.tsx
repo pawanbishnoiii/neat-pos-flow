@@ -42,6 +42,7 @@ const SettingsPage = () => {
   const [selectedPrinterBrand, setSelectedPrinterBrand] = useState('ezo');
   const [selectedPrinterModel, setSelectedPrinterModel] = useState('');
   const [selectedStoreTheme, setSelectedStoreTheme] = useState('suspended');
+  const [bizUpi, setBizUpi] = useState('');
   const [savingStoreTheme, setSavingStoreTheme] = useState(false);
   const [pendingReviews, setPendingReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
