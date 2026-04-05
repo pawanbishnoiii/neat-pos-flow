@@ -85,6 +85,7 @@ export type Database = {
           store_theme: string | null
           theme: string | null
           updated_at: string
+          upi_id: string | null
           whatsapp_number: string | null
           youtube_handle: string | null
         }
@@ -107,6 +108,7 @@ export type Database = {
           store_theme?: string | null
           theme?: string | null
           updated_at?: string
+          upi_id?: string | null
           whatsapp_number?: string | null
           youtube_handle?: string | null
         }
@@ -129,6 +131,7 @@ export type Database = {
           store_theme?: string | null
           theme?: string | null
           updated_at?: string
+          upi_id?: string | null
           whatsapp_number?: string | null
           youtube_handle?: string | null
         }
