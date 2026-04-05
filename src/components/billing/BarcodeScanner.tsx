@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera, RefreshCcw } from 'lucide-react';
+import { playBeep } from '@/lib/sounds';
 
 interface BarcodeScannerProps {
   open: boolean;
