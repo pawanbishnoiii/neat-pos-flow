@@ -64,6 +64,7 @@ const SettingsPage = () => {
       setBizGst(business.gst_number || '');
       setBizSlug(business.store_slug || '');
       setBizPrinterType(business.printer_type || '58mm');
+      setBizUpi((business as any).upi_id || '');
       setSelectedStoreTheme((business as any).store_theme || 'suspended');
     }
   }, [business]);
