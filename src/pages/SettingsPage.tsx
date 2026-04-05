@@ -106,7 +106,8 @@ const SettingsPage = () => {
     const { error } = await supabase.from('businesses').update({
       business_name: bizName.trim(), phone: bizPhone.trim() || null, address: bizAddress.trim() || null,
       gst_number: bizGst.trim() || null, store_slug: bizSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || null, printer_type: bizPrinterType,
-    }).eq('id', business.id);
+      upi_id: bizUpi.trim() || null,
+    } as any).eq('id', business.id);
     if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
     else { toast({ title: 'Saved!' }); refetch(); }
     setSavingBiz(false);
