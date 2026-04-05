@@ -253,7 +253,7 @@ const SettingsPage = () => {
           </div>
         </div>
         <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">UPI ID (for QR payments)</label>
-          <input type="text" value={(business as any)?.upi_id || ''} onChange={e => setBizUpi(e.target.value)} placeholder="yourname@upi"
+          <input type="text" value={bizUpi} onChange={e => setBizUpi(e.target.value)} placeholder="yourname@upi"
             className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
           <p className="text-[10px] text-muted-foreground mt-1">Used to generate UPI QR code during billing</p>
         </div>
