@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, CartItem } from '@/store/useAppStore';
-import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, Percent, IndianRupee, QrCode, Search, UserPlus, X } from 'lucide-react';
+import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, Percent, IndianRupee, QrCode, Search, UserPlus, X, CheckCircle, Volume2 } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,8 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import InvoicePreview from './InvoicePreview';
 import { connectPrinter, sendToPrinter, buildReceiptData, PrinterConnection } from '@/lib/ezoPrinter';
 import { QRCodeSVG } from 'qrcode.react';
-
-const VEHICLE_TYPES = ['Car', 'Bike', 'Scooter', 'Auto', 'SUV', 'Truck', 'Other'];
+import { playBeep, playSuccess, playError } from '@/lib/sounds';
 
 const CartPanel = () => {
   const { cart, updateQuantity, removeFromCart, clearCart } = useAppStore();
@@ -28,13 +27,13 @@ const CartPanel = () => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [showCustomerPanel, setShowCustomerPanel] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  // Discount state
+  const [showDiscount, setShowDiscount] = useState(false);
   const [discountType, setDiscountType] = useState<'percent' | 'flat'>('percent');
   const [discountValue, setDiscountValue] = useState('');
-  // UPI QR
+  // UPI flow states
   const [showUpiQr, setShowUpiQr] = useState(false);
+  const [upiApproved, setUpiApproved] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { business } = useBusiness();
   const { toast } = useToast();
@@ -42,8 +41,7 @@ const CartPanel = () => {
   const subtotal = cart.reduce((sum, item) => sum + item.product.discountPrice * item.quantity, 0);
   const taxTotal = cart.reduce((sum, item) => sum + (item.product.discountPrice * item.quantity * item.product.taxPercent) / 100, 0);
   const couponAmount = couponDiscount > 0 ? (subtotal * couponDiscount) / 100 : 0;
-  
-  // Manual discount
+
   const manualDiscount = useMemo(() => {
     const val = parseFloat(discountValue) || 0;
     if (discountType === 'percent') return (subtotal * Math.min(val, 100)) / 100;
@@ -61,9 +59,9 @@ const CartPanel = () => {
     { id: 'cod', label: 'COD', icon: FileText },
   ];
 
-  // Customer search - search by name, phone, or email
+  // Customer search
   useEffect(() => {
-    if (!business || customerSearch.length < 2) { setSuggestions([]); return; }
+    if (!business || customerSearch.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
     const timer = setTimeout(async () => {
       const { data } = await supabase.from('customers').select('id, full_name, phone, email, vehicle_number, vehicle_type, visit_count, total_spent')
         .eq('business_id', business.id)
@@ -83,13 +81,14 @@ const CartPanel = () => {
     setVehicleType(c.vehicle_type || '');
     setSelectedCustomer(c);
     setShowSuggestions(false);
-    setShowCustomerPanel(false);
     setCustomerSearch('');
+    playBeep();
   };
 
   const clearCustomer = () => {
     setCustomerName(''); setCustomerPhone(''); setCustomerEmail('');
     setVehicleNumber(''); setVehicleType(''); setSelectedCustomer(null);
+    setCustomerSearch('');
   };
 
   // Apply coupon
@@ -99,9 +98,11 @@ const CartPanel = () => {
       .eq('business_id', business.id).eq('coupon_code', couponCode.trim().toUpperCase()).eq('is_active', true).maybeSingle();
     if (data) {
       setCouponDiscount(data.discount_percent);
+      playBeep();
       toast({ title: 'Coupon Applied!', description: `${data.title} — ${data.discount_percent}% off` });
     } else {
       setCouponDiscount(0);
+      playError();
       toast({ title: 'Invalid Coupon', variant: 'destructive' });
     }
   };
@@ -111,8 +112,22 @@ const CartPanel = () => {
     return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
   };
 
+  const canCharge = () => {
+    // Must have customer name or phone
+    if (!customerName.trim() && !customerPhone.trim()) return false;
+    if (cart.length === 0) return false;
+    // If UPI selected, must be approved
+    if (paymentMethod === 'upi' && upiId && !upiApproved) return false;
+    return true;
+  };
+
   const handleCharge = async () => {
-    if (!business) { toast({ title: 'Error', description: 'Set up business first', variant: 'destructive' }); return; }
+    if (!business) { toast({ title: 'Error', description: 'Set up business first', variant: 'destructive' }); playError(); return; }
+    if (!customerName.trim() && !customerPhone.trim()) {
+      toast({ title: 'Customer Required', description: 'Please add customer name or phone number', variant: 'destructive' });
+      playError();
+      return;
+    }
     setSaving(true);
     const invNum = generateInvoiceNumber();
     setInvoiceNumber(invNum);
@@ -155,44 +170,68 @@ const CartPanel = () => {
         }
       }
 
+      playSuccess();
       setShowInvoice(true);
       toast({ title: 'Invoice Created!', description: `${invNum} saved.` });
     } catch (err: any) {
+      playError();
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally { setSaving(false); }
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!invoiceNumber || !business) return;
+    try {
+      const { data: inv } = await supabase.from('invoices').select('id').eq('business_id', business.id).eq('invoice_number', invoiceNumber).maybeSingle();
+      if (inv) {
+        await supabase.from('invoice_items').delete().eq('invoice_id', inv.id);
+        await supabase.from('invoices').delete().eq('id', inv.id);
+        toast({ title: 'Invoice Deleted' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+    handleDone();
   };
 
   const handleConnectPrinter = async () => {
     const conn = await connectPrinter();
     setPrinter(conn);
-    if (conn.connected) toast({ title: 'Printer Connected!' });
+    if (conn.connected) { playBeep(); toast({ title: 'Printer Connected!' }); }
     else toast({ title: 'Failed', variant: 'destructive' });
   };
 
   const handlePrint = async () => {
     if (!printer.connected || !printer.characteristic) return;
     const receiptData = buildReceiptData({
-      businessName: business?.business_name || 'Ezo', businessAddress: business?.address || '',
+      businessName: business?.business_name || '', businessAddress: business?.address || '',
       businessPhone: business?.phone || '', businessGst: business?.gst_number || '',
       invoiceNumber, customerName, customerPhone,
       items: cart.map(i => ({ name: i.product.name, qty: i.quantity, price: i.product.discountPrice, total: i.product.discountPrice * i.quantity })),
       subtotal, tax: taxTotal, total: grandTotal, paymentMethod,
     });
-    try { await sendToPrinter(printer.characteristic, receiptData); toast({ title: 'Printed!' }); }
-    catch (err: any) { toast({ title: 'Print Error', description: err.message, variant: 'destructive' }); }
+    try {
+      await sendToPrinter(printer.characteristic, receiptData);
+      playSuccess();
+      toast({ title: 'Printed!' });
+    } catch (err: any) {
+      playError();
+      toast({ title: 'Print Error', description: err.message, variant: 'destructive' });
+    }
   };
 
   const handleShareWhatsApp = () => {
     const itemsList = cart.map(i => `• ${i.product.name} x${i.quantity} = ₹${(i.product.discountPrice * i.quantity).toFixed(0)}`).join('\n');
     const storeUrl = business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : '';
-    const msg = `*Invoice: ${invoiceNumber}*\n${business?.business_name || 'Ezo'}\n\n${itemsList}\n\nSubtotal: ₹${subtotal.toFixed(0)}\nTax: ₹${taxTotal.toFixed(0)}${couponAmount > 0 ? `\nCoupon: -₹${couponAmount.toFixed(0)}` : ''}${manualDiscount > 0 ? `\nDiscount: -₹${manualDiscount.toFixed(0)}` : ''}\n*Total: ₹${grandTotal.toFixed(0)}*\nPayment: ${paymentMethod.toUpperCase()}${storeUrl ? `\n\nVisit: ${storeUrl}` : ''}\n\nThank you!`;
+    const msg = `*Invoice: ${invoiceNumber}*\n${business?.business_name || ''}\n\n${itemsList}\n\nSubtotal: ₹${subtotal.toFixed(0)}\nTax: ₹${taxTotal.toFixed(0)}${couponAmount > 0 ? `\nCoupon: -₹${couponAmount.toFixed(0)}` : ''}${manualDiscount > 0 ? `\nDiscount: -₹${manualDiscount.toFixed(0)}` : ''}\n*Total: ₹${grandTotal.toFixed(0)}*\nPayment: ${paymentMethod.toUpperCase()}${storeUrl ? `\n\nVisit: ${storeUrl}` : ''}\n\nThank you!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const handleDone = () => {
     setShowInvoice(false); setCustomerName(''); setCustomerPhone(''); setVehicleNumber('');
     setVehicleType(''); setCustomerEmail(''); setCouponCode(''); setCouponDiscount(0);
-    setDiscountValue(''); setSelectedCustomer(null); setShowUpiQr(false); clearCart();
+    setDiscountValue(''); setSelectedCustomer(null); setShowUpiQr(false); setUpiApproved(false);
+    setShowDiscount(false); setCustomerSearch(''); clearCart();
   };
 
   // Invoice view
@@ -208,7 +247,7 @@ const CartPanel = () => {
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar p-4 flex justify-center">
           <InvoicePreview ref={invoiceRef} cart={cart} customerName={customerName} customerPhone={customerPhone} customerEmail={customerEmail}
-            paymentMethod={paymentMethod} invoiceNumber={invoiceNumber} businessName={business?.business_name || 'Ezo'}
+            paymentMethod={paymentMethod} invoiceNumber={invoiceNumber} businessName={business?.business_name || ''}
             businessAddress={business?.address} businessPhone={business?.phone} businessGst={business?.gst_number}
             subtotal={subtotal} taxTotal={taxTotal} grandTotal={grandTotal}
             storeUrl={business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : undefined} />
@@ -224,9 +263,15 @@ const CartPanel = () => {
               <Share2 className="w-4 h-4" /> WhatsApp
             </motion.button>
           </div>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={handleDone} className="w-full py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary">
-            Done — New Bill
-          </motion.button>
+          <div className="flex gap-2">
+            <motion.button whileTap={{ scale: 0.95 }} onClick={handleDeleteInvoice}
+              className="flex-1 py-3 rounded-xl bg-destructive/10 text-destructive text-sm font-semibold flex items-center justify-center gap-2">
+              <Trash2 className="w-4 h-4" /> Delete Bill
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={handleDone} className="flex-[2] py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary">
+              Done — New Bill
+            </motion.button>
+          </div>
         </div>
       </div>
     );
@@ -240,7 +285,7 @@ const CartPanel = () => {
           <div className="flex items-center gap-2">
             <motion.button whileTap={{ scale: 0.95 }} onClick={handleConnectPrinter}
               className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1 ${printer.connected ? 'bg-success/10 text-success' : 'bg-secondary text-secondary-foreground'}`}>
-              <Printer className="w-3 h-3" />{printer.connected ? '✓' : 'Ezo'}
+              <Printer className="w-3 h-3" />{printer.connected ? '✓' : 'Printer'}
             </motion.button>
             <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/10 text-primary">{cart.length} items</span>
           </div>
@@ -274,20 +319,11 @@ const CartPanel = () => {
               ))}
             </AnimatePresence>
 
-            {/* Customer Section */}
+            {/* Customer Section - Combined search + add */}
             <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><UserCheck className="w-3 h-3" /> Customer</p>
-                {selectedCustomer ? (
-                  <button onClick={clearCustomer} className="text-[10px] text-destructive font-medium flex items-center gap-0.5"><X className="w-3 h-3" /> Remove</button>
-                ) : (
-                  <button onClick={() => setShowCustomerPanel(!showCustomerPanel)} className="text-[10px] text-primary font-medium flex items-center gap-0.5">
-                    {showCustomerPanel ? <X className="w-3 h-3" /> : <Search className="w-3 h-3" />} {showCustomerPanel ? 'Close' : 'Search'}
-                  </button>
-                )}
-              </div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><UserCheck className="w-3 h-3" /> Customer <span className="text-destructive">*</span></p>
 
-              {selectedCustomer && (
+              {selectedCustomer ? (
                 <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
                   className="rounded-xl bg-primary/5 border border-primary/20 p-3 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><UserCheck className="w-4 h-4 text-primary" /></div>
@@ -295,22 +331,24 @@ const CartPanel = () => {
                     <p className="text-sm font-semibold text-foreground truncate">{selectedCustomer.full_name}</p>
                     <p className="text-[10px] text-muted-foreground">{selectedCustomer.phone || selectedCustomer.email || ''} • {selectedCustomer.visit_count || 0} visits</p>
                   </div>
+                  <button onClick={clearCustomer} className="p-1.5 rounded-lg hover:bg-destructive/10"><X className="w-3.5 h-3.5 text-destructive" /></button>
                 </motion.div>
-              )}
-
-              {showCustomerPanel && !selectedCustomer && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-2 overflow-hidden">
+              ) : (
+                <div className="space-y-2">
+                  {/* Search bar */}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                    <input type="text" placeholder="Search name, phone, email..." value={customerSearch}
-                      onChange={e => setCustomerSearch(e.target.value)}
+                    <input type="text" placeholder="Search or add customer..." value={customerSearch}
+                      onChange={e => { setCustomerSearch(e.target.value); setCustomerName(e.target.value); }}
                       className="w-full pl-9 pr-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
+
+                  {/* Suggestions dropdown */}
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="rounded-xl border border-border bg-card shadow-elevated overflow-hidden max-h-40 overflow-y-auto">
+                    <div className="rounded-xl border border-border bg-card shadow-elevated overflow-hidden max-h-36 overflow-y-auto">
                       {suggestions.map((s) => (
                         <button key={s.id} onClick={() => selectCustomer(s)} className="w-full flex items-center gap-2.5 p-2.5 text-left hover:bg-muted/50 text-sm border-b border-border last:border-0">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><UserCheck className="w-3.5 h-3.5 text-primary" /></div>
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><UserCheck className="w-3 h-3 text-primary" /></div>
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold text-foreground truncate text-xs">{s.full_name}</p>
                             <p className="text-[10px] text-muted-foreground">{s.phone || ''} {s.email ? `• ${s.email}` : ''}</p>
@@ -320,54 +358,59 @@ const CartPanel = () => {
                       ))}
                     </div>
                   )}
-                  {/* Quick add new customer */}
-                  <div className="space-y-1.5">
-                    <input type="text" placeholder="Customer Name" value={customerName} onChange={e => setCustomerName(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                    <div className="flex gap-2">
-                      <input type="tel" placeholder="Phone" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
-                        className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                      <input type="text" placeholder="Vehicle #" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value.toUpperCase())}
-                        className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                    </div>
-                    {(customerName || customerPhone) && (
-                      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} whileTap={{ scale: 0.95 }}
-                        onClick={() => { setSelectedCustomer({ full_name: customerName, phone: customerPhone, email: customerEmail, visit_count: 0 }); setShowCustomerPanel(false); }}
-                        className="w-full py-2 rounded-xl bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center gap-1">
-                        <UserPlus className="w-3.5 h-3.5" /> Add as New Customer
-                      </motion.button>
-                    )}
+
+                  {/* Inline new customer fields */}
+                  <div className="flex gap-2">
+                    <input type="tel" placeholder="Phone *" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    <input type="text" placeholder="Vehicle #" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value.toUpperCase())}
+                      className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
-                </motion.div>
+
+                  {/* Auto-add as new customer when name or phone filled */}
+                  {(customerName.trim() || customerPhone.trim()) && !selectedCustomer && suggestions.length === 0 && customerSearch.length >= 2 && (
+                    <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} whileTap={{ scale: 0.95 }}
+                      onClick={() => { setSelectedCustomer({ full_name: customerName, phone: customerPhone, email: customerEmail, visit_count: 0, isNew: true }); playBeep(); }}
+                      className="w-full py-2 rounded-xl bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center gap-1">
+                      <UserPlus className="w-3.5 h-3.5" /> Add "{customerName || customerPhone}" as New Customer
+                    </motion.button>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* Discount Section */}
+            {/* Discount - Small toggle button */}
             <div className="space-y-2 pt-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Tag className="w-3 h-3" /> Discount</p>
-              <div className="flex gap-2">
-                <div className="flex rounded-xl border border-border overflow-hidden">
-                  <button onClick={() => setDiscountType('percent')}
-                    className={`px-3 py-2 text-xs font-semibold flex items-center gap-1 transition-colors ${discountType === 'percent' ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
-                    <Percent className="w-3 h-3" /> %
-                  </button>
-                  <button onClick={() => setDiscountType('flat')}
-                    className={`px-3 py-2 text-xs font-semibold flex items-center gap-1 transition-colors ${discountType === 'flat' ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
-                    <IndianRupee className="w-3 h-3" /> ₹
-                  </button>
-                </div>
-                <input type="number" placeholder={discountType === 'percent' ? 'e.g. 10' : 'e.g. 50'} value={discountValue}
-                  onChange={e => setDiscountValue(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-              </div>
-              {manualDiscount > 0 && (
-                <p className="text-xs text-success font-medium">Discount: −₹{manualDiscount.toFixed(0)} {discountType === 'percent' ? `(${discountValue}%)` : ''}</p>
-              )}
+              <button onClick={() => setShowDiscount(!showDiscount)}
+                className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 hover:text-primary transition-colors">
+                <Tag className="w-3 h-3" /> Discount {manualDiscount > 0 && <span className="text-success ml-1">−₹{manualDiscount.toFixed(0)}</span>}
+              </button>
+              <AnimatePresence>
+                {showDiscount && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden space-y-2">
+                    <div className="flex gap-2">
+                      <div className="flex rounded-xl border border-border overflow-hidden">
+                        <button onClick={() => setDiscountType('percent')}
+                          className={`px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-colors ${discountType === 'percent' ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
+                          <Percent className="w-3 h-3" /> %
+                        </button>
+                        <button onClick={() => setDiscountType('flat')}
+                          className={`px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-colors ${discountType === 'flat' ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
+                          <IndianRupee className="w-3 h-3" /> ₹
+                        </button>
+                      </div>
+                      <input type="number" placeholder={discountType === 'percent' ? 'e.g. 10' : 'e.g. 50'} value={discountValue}
+                        onChange={e => setDiscountValue(e.target.value)}
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Coupon */}
             <div className="space-y-2 pt-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Tag className="w-3 h-3" /> Coupon Code</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Tag className="w-3 h-3" /> Coupon</p>
               <div className="flex gap-2">
                 <input type="text" placeholder="Enter coupon..." value={couponCode} onChange={e => setCouponCode(e.target.value.toUpperCase())}
                   className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
@@ -386,7 +429,8 @@ const CartPanel = () => {
             {paymentMethods.map(pm => {
               const Icon = pm.icon;
               return (
-                <motion.button key={pm.id} whileTap={{ scale: 0.95 }} onClick={() => { setPaymentMethod(pm.id); if (pm.id === 'upi' && upiId) setShowUpiQr(true); else setShowUpiQr(false); }}
+                <motion.button key={pm.id} whileTap={{ scale: 0.95 }}
+                  onClick={() => { setPaymentMethod(pm.id); setShowUpiQr(false); setUpiApproved(false); }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-colors ${paymentMethod === pm.id ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
                   <Icon className="w-3.5 h-3.5" />{pm.label}
                 </motion.button>
@@ -394,17 +438,28 @@ const CartPanel = () => {
             })}
           </div>
 
-          {/* UPI QR Code */}
+          {/* UPI Flow: Show QR after clicking Pay, then Approve */}
           <AnimatePresence>
             {showUpiQr && upiId && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                 className="rounded-xl bg-card border border-border p-4 flex flex-col items-center gap-3 overflow-hidden">
                 <p className="text-xs font-semibold text-foreground">Scan to Pay ₹{grandTotal.toFixed(0)}</p>
                 <a href={upiLink} className="block">
-                  <QRCodeSVG value={upiLink} size={160} bgColor="transparent" fgColor="hsl(var(--foreground))" level="M" />
+                  <QRCodeSVG value={upiLink} size={140} bgColor="transparent" fgColor="hsl(var(--foreground))" level="M" />
                 </a>
                 <p className="text-[10px] text-muted-foreground">{upiId}</p>
                 <p className="text-[10px] text-primary">Tap QR to open UPI app</p>
+                {!upiApproved ? (
+                  <motion.button whileTap={{ scale: 0.95 }}
+                    onClick={() => { setUpiApproved(true); playSuccess(); toast({ title: 'Payment Approved!' }); }}
+                    className="w-full py-2.5 rounded-xl bg-success/10 text-success text-sm font-bold flex items-center justify-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Approve Payment
+                  </motion.button>
+                ) : (
+                  <div className="flex items-center gap-2 text-success text-sm font-semibold">
+                    <CheckCircle className="w-4 h-4" /> Payment Approved ✓
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -418,13 +473,27 @@ const CartPanel = () => {
             <div className="flex justify-between text-base font-bold pt-1 border-t border-border text-foreground"><span>Total</span><span className="gradient-primary-text">₹{grandTotal.toFixed(0)}</span></div>
           </div>
 
+          {/* Validation message */}
+          {(!customerName.trim() && !customerPhone.trim()) && (
+            <p className="text-[10px] text-destructive font-medium text-center">⚠ Customer name or phone required to bill</p>
+          )}
+
           {/* Actions */}
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.95 }} onClick={clearCart} className="flex-1 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold">Clear</motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={handleCharge} disabled={saving}
-              className="flex-[2] py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary flex items-center justify-center gap-2 disabled:opacity-50">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Charge ₹{grandTotal.toFixed(0)}
-            </motion.button>
+            {paymentMethod === 'upi' && upiId && !showUpiQr ? (
+              <motion.button whileTap={{ scale: 0.95 }}
+                onClick={() => { if (!customerName.trim() && !customerPhone.trim()) { playError(); toast({ title: 'Customer Required', variant: 'destructive' }); return; } setShowUpiQr(true); }}
+                className="flex-[2] py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary flex items-center justify-center gap-2">
+                <QrCode className="w-4 h-4" /> Pay ₹{grandTotal.toFixed(0)}
+              </motion.button>
+            ) : (
+              <motion.button whileTap={{ scale: 0.95 }} onClick={handleCharge} disabled={saving || !canCharge()}
+                className="flex-[2] py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary flex items-center justify-center gap-2 disabled:opacity-50">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                {paymentMethod === 'upi' && upiApproved ? 'Print Bill' : `Charge ₹${grandTotal.toFixed(0)}`}
+              </motion.button>
+            )}
           </div>
         </div>
       )}
