@@ -423,9 +423,9 @@ const SettingsPage = () => {
   return (
     <>
       {/* ===== DESKTOP LAYOUT ===== */}
-      <div className="hidden lg:flex h-[calc(100vh-64px)] bg-background">
+      <div className="hidden lg:flex h-screen bg-background lg:ml-20">
         {/* Desktop Top Bar */}
-        <div className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 flex items-center px-6">
+        <div className="fixed top-0 left-20 right-0 h-16 bg-card border-b border-border z-30 flex items-center px-6">
           <div className="flex items-center gap-3 flex-1">
             {business?.logo_url ? (
               <img src={business.logo_url.startsWith('http') ? business.logo_url : supabase.storage.from('product-images').getPublicUrl(business.logo_url).data.publicUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
