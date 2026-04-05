@@ -42,6 +42,7 @@ const SettingsPage = () => {
   const [selectedPrinterBrand, setSelectedPrinterBrand] = useState('ezo');
   const [selectedPrinterModel, setSelectedPrinterModel] = useState('');
   const [selectedStoreTheme, setSelectedStoreTheme] = useState('suspended');
+  const [bizUpi, setBizUpi] = useState('');
   const [savingStoreTheme, setSavingStoreTheme] = useState(false);
   const [pendingReviews, setPendingReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -63,6 +64,7 @@ const SettingsPage = () => {
       setBizGst(business.gst_number || '');
       setBizSlug(business.store_slug || '');
       setBizPrinterType(business.printer_type || '58mm');
+      setBizUpi((business as any).upi_id || '');
       setSelectedStoreTheme((business as any).store_theme || 'suspended');
     }
   }, [business]);
@@ -104,7 +106,8 @@ const SettingsPage = () => {
     const { error } = await supabase.from('businesses').update({
       business_name: bizName.trim(), phone: bizPhone.trim() || null, address: bizAddress.trim() || null,
       gst_number: bizGst.trim() || null, store_slug: bizSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || null, printer_type: bizPrinterType,
-    }).eq('id', business.id);
+      upi_id: bizUpi.trim() || null,
+    } as any).eq('id', business.id);
     if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
     else { toast({ title: 'Saved!' }); refetch(); }
     setSavingBiz(false);
@@ -248,6 +251,11 @@ const SettingsPage = () => {
             {!checkingSlug && slugAvailable === true && bizSlug.trim() && <p className="text-xs text-success font-medium flex items-center gap-1 mt-1"><Check className="w-3 h-3" /> Available</p>}
             {!checkingSlug && slugAvailable === false && bizSlug.trim() && <p className="text-xs text-destructive font-medium flex items-center gap-1 mt-1"><X className="w-3 h-3" /> Taken</p>}
           </div>
+        </div>
+        <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">UPI ID (for QR payments)</label>
+          <input type="text" value={bizUpi} onChange={e => setBizUpi(e.target.value)} placeholder="yourname@upi"
+            className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          <p className="text-[10px] text-muted-foreground mt-1">Used to generate UPI QR code during billing</p>
         </div>
         <motion.button whileTap={{ scale: 0.97 }} onClick={handleSaveBusiness} disabled={savingBiz}
           className="px-6 py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center gap-2 disabled:opacity-50">
@@ -423,9 +431,9 @@ const SettingsPage = () => {
   return (
     <>
       {/* ===== DESKTOP LAYOUT ===== */}
-      <div className="hidden lg:flex h-[calc(100vh-64px)] bg-background">
+      <div className="hidden lg:flex h-screen bg-background lg:ml-20">
         {/* Desktop Top Bar */}
-        <div className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 flex items-center px-6">
+        <div className="fixed top-0 left-20 right-0 h-16 bg-card border-b border-border z-30 flex items-center px-6">
           <div className="flex items-center gap-3 flex-1">
             {business?.logo_url ? (
               <img src={business.logo_url.startsWith('http') ? business.logo_url : supabase.storage.from('product-images').getPublicUrl(business.logo_url).data.publicUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
