@@ -249,6 +249,11 @@ const SettingsPage = () => {
             {!checkingSlug && slugAvailable === false && bizSlug.trim() && <p className="text-xs text-destructive font-medium flex items-center gap-1 mt-1"><X className="w-3 h-3" /> Taken</p>}
           </div>
         </div>
+        <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">UPI ID (for QR payments)</label>
+          <input type="text" value={(business as any)?.upi_id || ''} onChange={e => setBizUpi(e.target.value)} placeholder="yourname@upi"
+            className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          <p className="text-[10px] text-muted-foreground mt-1">Used to generate UPI QR code during billing</p>
+        </div>
         <motion.button whileTap={{ scale: 0.97 }} onClick={handleSaveBusiness} disabled={savingBiz}
           className="px-6 py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center gap-2 disabled:opacity-50">
           {savingBiz ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Changes
