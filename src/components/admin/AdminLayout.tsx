@@ -4,11 +4,14 @@ import { motion } from 'framer-motion';
 import { BarChart3, Package, Store, Users, Mail, Bell, Settings, Activity, Shield, ChevronLeft, ChevronRight, CreditCard, Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
+import { Palette } from 'lucide-react';
+
 const NAV_ITEMS = [
   { path: '/admin', icon: BarChart3, label: 'Overview' },
   { path: '/admin/gallery', icon: Package, label: 'Gallery' },
   { path: '/admin/stores', icon: Store, label: 'Stores' },
   { path: '/admin/users', icon: Users, label: 'Users' },
+  { path: '/admin/themes', icon: Palette, label: 'Themes' },
   { path: '/admin/smtp', icon: Mail, label: 'Auth & SMTP' },
   { path: '/admin/alerts', icon: Bell, label: 'Alerts' },
   { path: '/admin/features', icon: Settings, label: 'Features' },

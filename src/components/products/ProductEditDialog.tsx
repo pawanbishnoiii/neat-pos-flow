@@ -57,7 +57,7 @@ const ProductEditDialog = ({ open, onClose, product, onUpdated }: ProductEditDia
       const { error } = await supabase.from('products').update({
         name: form.name, description: form.description, category: form.category, brand_name: form.brand_name,
         price: parseFloat(form.price) || 0, discount_price: parseFloat(form.discount_price) || parseFloat(form.price) || 0,
-        tax_percent: parseFloat(form.tax_percent) || 18, stock: parseInt(form.stock) || 0,
+        tax_percent: form.tax_percent === '' || form.tax_percent === '0' ? 0 : (parseFloat(form.tax_percent) || 0), stock: parseInt(form.stock) || 0,
         barcode_value: form.barcode_value, sku: form.sku, image_url: imageUrl,
       }).eq('id', product.id);
 
@@ -76,12 +76,12 @@ const ProductEditDialog = ({ open, onClose, product, onUpdated }: ProductEditDia
 
   return (
     <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="rounded-2xl max-h-[90vh] overflow-y-auto max-w-lg p-0">
+      <DialogContent className="rounded-2xl max-h-[85vh] max-w-lg p-0 overflow-hidden flex flex-col">
         <DialogHeader className="p-4 border-b border-border">
           <DialogTitle className="flex items-center gap-2 font-display"><Package className="w-5 h-5 text-primary" /> Edit Product</DialogTitle>
           <DialogDescription>Update product details</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        <form onSubmit={handleSubmit} className="p-4 space-y-3 overflow-y-auto flex-1">
           {/* Image */}
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
           {imagePreview ? (
@@ -112,7 +112,7 @@ const ProductEditDialog = ({ open, onClose, product, onUpdated }: ProductEditDia
                 {categoryDefaults.map(c => <option key={c} value={c}>{c}</option>)}
               </select></div>
             <div><label className="text-xs font-medium text-muted-foreground mb-1 block">Tax %</label>
-              <input type="number" value={form.tax_percent} onChange={e => handleChange('tax_percent', e.target.value)}
+              <input type="number" min="0" step="0.01" value={form.tax_percent} onChange={e => handleChange('tax_percent', e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl bg-background border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" /></div>
           </div>
 
