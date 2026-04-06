@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Users, Store, Package, Receipt, Shield, Plus, Loader2, Trash2, ImagePlus, Pencil, Tag, BarChart3, Settings, Globe, Database, Eye, Search, Mail, Bell, Server, Send, Activity, CheckCircle, XCircle, Save, Clock, CreditCard } from 'lucide-react';
+import { Users, Store, Package, Receipt, Shield, Plus, Loader2, Trash2, ImagePlus, Pencil, Tag, BarChart3, Settings, Globe, Database, Eye, EyeOff, Search, Mail, Bell, Server, Send, Activity, CheckCircle, XCircle, Save, Clock, CreditCard, Palette } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,19 @@ import { CATEGORY_CONFIGS, getCategoryConfig } from '@/lib/categoryConfig';
 
 const generateSKU = () => `GAL-${Date.now().toString(36).toUpperCase()}`;
 
-type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features' | 'smtp' | 'notifications' | 'analytics' | 'subscriptions';
+const STORE_THEMES_INFO: Record<string, { label: string; emoji: string; desc: string }> = {
+  suspended: { label: 'Default', emoji: '⚡', desc: 'Category-based auto theme' },
+  starter: { label: 'Starter', emoji: '🌱', desc: 'Clean, minimal single-column' },
+  modern: { label: 'Modern', emoji: '✨', desc: 'Gradient hero, glassmorphism' },
+  bold: { label: 'Bold', emoji: '🔥', desc: 'Vibrant, large typography' },
+  luxury: { label: 'Luxury', emoji: '👑', desc: 'Dark, gold accents, serif' },
+  auto_service: { label: 'Auto Service', emoji: '🚗', desc: 'Premium automotive' },
+  grocery: { label: 'Grocery', emoji: '🛒', desc: 'Fresh grocery store' },
+  fashion: { label: 'Fashion', emoji: '👗', desc: 'Elegant fashion' },
+  bookshop: { label: 'Bookshop', emoji: '📚', desc: 'Warm bookshop' },
+};
+
+type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features' | 'smtp' | 'notifications' | 'analytics' | 'subscriptions' | 'themes';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -36,8 +48,12 @@ const AdminDashboard = () => {
   const [savingSmtp, setSavingSmtp] = useState(false);
   const [smtpId, setSmtpId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
+  // Theme management
+  const [themeSettings, setThemeSettings] = useState<any[]>([]);
+  const [savingThemes, setSavingThemes] = useState(false);
+  // Subscription plans
+  const [plans, setPlans] = useState<any[]>([]);
 
-  // Derive active tab from URL
   const getTabFromPath = (path: string): AdminTab => {
     if (path.includes('/admin/gallery')) return 'gallery';
     if (path.includes('/admin/stores') || path.includes('/admin/businesses')) return 'businesses';
@@ -47,6 +63,7 @@ const AdminDashboard = () => {
     if (path.includes('/admin/features')) return 'features';
     if (path.includes('/admin/analytics')) return 'analytics';
     if (path.includes('/admin/subscriptions')) return 'subscriptions';
+    if (path.includes('/admin/themes')) return 'themes';
     return 'overview';
   };
 
@@ -57,6 +74,7 @@ const AdminDashboard = () => {
       overview: '/admin', gallery: '/admin/gallery', businesses: '/admin/stores',
       users: '/admin/users', smtp: '/admin/smtp', notifications: '/admin/alerts',
       features: '/admin/features', analytics: '/admin/analytics', subscriptions: '/admin/subscriptions',
+      themes: '/admin/themes',
     };
     navigate(pathMap[tabId] || '/admin');
   };
@@ -64,8 +82,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchAll = async () => {
       const [users, businesses, products, invoices, customers, offers, reviews, gallery] = await Promise.all([
-        supabase.from('profiles').select('id, name, phone, created_at, language, last_sign_in_at').order('created_at', { ascending: false }),
-        supabase.from('businesses').select('id, business_name, category, owner_id, created_at, store_slug, phone').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id, name, phone, created_at, language, last_sign_in_at, avatar_url').order('created_at', { ascending: false }),
+        supabase.from('businesses').select('id, business_name, category, owner_id, created_at, store_slug, phone, store_theme').order('created_at', { ascending: false }),
         supabase.from('products').select('id', { count: 'exact', head: true }),
         supabase.from('invoices').select('id', { count: 'exact', head: true }),
         supabase.from('customers').select('id', { count: 'exact', head: true }),
@@ -86,6 +104,8 @@ const AdminDashboard = () => {
     fetchGallery();
     fetchSmtp();
     fetchNotifications();
+    fetchThemeSettings();
+    fetchPlans();
   }, []);
 
   const fetchGallery = async () => {
@@ -104,6 +124,16 @@ const AdminDashboard = () => {
   const fetchNotifications = async () => {
     const { data } = await supabase.from('email_notifications').select('*').order('created_at', { ascending: false }).limit(50);
     setNotifications(data || []);
+  };
+
+  const fetchThemeSettings = async () => {
+    const { data } = await supabase.from('store_theme_settings').select('*').order('sort_order');
+    setThemeSettings(data || []);
+  };
+
+  const fetchPlans = async () => {
+    const { data } = await supabase.from('subscription_plans').select('*').order('sort_order');
+    setPlans(data || []);
   };
 
   const handleSaveSmtp = async () => {
@@ -148,7 +178,7 @@ const AdminDashboard = () => {
     const payload = {
       name: form.name, description: form.description, category: form.category, brand_name: form.brand_name,
       price: parseFloat(form.price) || 0, discount_price: parseFloat(form.discount_price) || parseFloat(form.price) || 0,
-      tax_percent: parseFloat(form.tax_percent) || 18, sku: form.sku, image_url: imageUrl, store_category: form.store_category,
+      tax_percent: parseFloat(form.tax_percent) || 0, sku: form.sku, image_url: imageUrl, store_category: form.store_category,
     };
     let error;
     if (editingItem) ({ error } = await supabase.from('gallery_products').update(payload).eq('id', editingItem.id));
@@ -179,6 +209,13 @@ const AdminDashboard = () => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
     return supabase.storage.from('product-images').getPublicUrl(url).data.publicUrl;
+  };
+
+  // Theme management handlers
+  const handleToggleTheme = async (id: string, field: 'is_active' | 'is_pro_only', current: boolean) => {
+    await supabase.from('store_theme_settings').update({ [field]: !current }).eq('id', id);
+    setThemeSettings(prev => prev.map(t => t.id === id ? { ...t, [field]: !current } : t));
+    toast({ title: 'Theme updated!' });
   };
 
   const galleryCats = ['All', ...new Set(galleryItems.map(g => g.category))];
@@ -346,8 +383,11 @@ const AdminDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><CatIcon className="w-5 h-5 text-primary" /></div>
-                    <div><p className="text-sm font-semibold text-foreground">{b.business_name}</p><p className="text-xs text-muted-foreground">{config.name} {b.store_slug ? `• /store/${b.store_slug}` : ''}</p>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{b.business_name}</p>
+                      <p className="text-xs text-muted-foreground">{config.name} {b.store_slug ? `• /store/${b.store_slug}` : ''}</p>
                       {b.phone && <p className="text-[10px] text-muted-foreground">📞 {b.phone}</p>}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">Theme: {STORE_THEMES_INFO[b.store_theme]?.label || b.store_theme || 'Default'}</span>
                     </div>
                   </div>
                   {b.store_slug && <button onClick={() => window.open(`/store/${b.store_slug}`, '_blank')} className="p-1.5 rounded-lg hover:bg-muted"><Globe className="w-4 h-4 text-muted-foreground" /></button>}
@@ -377,8 +417,8 @@ const AdminDashboard = () => {
             const userBiz = allBusinesses.filter(b => b.owner_id === p.id);
             return (
               <div key={p.id} className="rounded-2xl glass-card shadow-soft p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Users className="w-5 h-5 text-primary" />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                  {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : <Users className="w-5 h-5 text-primary" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground">{p.name || 'Unnamed'}</p>
@@ -396,10 +436,58 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* Theme Management */}
+      {activeTab === 'themes' && (
+        <div className="space-y-4">
+          <div className="rounded-2xl glass-card shadow-soft p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Palette className="w-6 h-6 text-primary" /></div>
+              <div><h3 className="text-sm font-bold text-foreground">Store Theme Management</h3><p className="text-xs text-muted-foreground">Control which themes are available and which are Pro-only</p></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {themeSettings.map(ts => {
+              const info = STORE_THEMES_INFO[ts.theme_key] || { label: ts.theme_key, emoji: '🎨', desc: '' };
+              return (
+                <div key={ts.id} className={`rounded-2xl glass-card shadow-soft p-4 space-y-3 border-2 transition-colors ${ts.is_active ? 'border-success/30' : 'border-destructive/30 opacity-60'}`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{info.emoji}</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">{info.label}</p>
+                      <p className="text-xs text-muted-foreground">{info.desc}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => handleToggleTheme(ts.id, 'is_active', ts.is_active)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${ts.is_active ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                        {ts.is_active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        {ts.is_active ? 'Active' : 'Hidden'}
+                      </button>
+                      <button onClick={() => handleToggleTheme(ts.id, 'is_pro_only', ts.is_pro_only)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${ts.is_pro_only ? 'bg-warning/10 text-warning' : 'bg-secondary text-secondary-foreground'}`}>
+                        <CreditCard className="w-3 h-3" />
+                        {ts.is_pro_only ? 'Pro Only' : 'Free'}
+                      </button>
+                    </div>
+                  </div>
+                  {/* Show stores using this theme */}
+                  {(() => {
+                    const storesUsing = allBusinesses.filter(b => b.store_theme === ts.theme_key);
+                    return storesUsing.length > 0 ? (
+                      <p className="text-[10px] text-muted-foreground">{storesUsing.length} store(s) using this theme</p>
+                    ) : null;
+                  })()}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* SMTP / Auth Settings */}
       {activeTab === 'smtp' && (
         <div className="space-y-4">
-          {/* Auth Provider Info */}
           <div className="rounded-2xl glass-card shadow-soft p-5 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Shield className="w-6 h-6 text-primary" /></div>
@@ -417,7 +505,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* SMTP Config */}
           <div className="rounded-2xl glass-card shadow-soft p-5 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Server className="w-6 h-6 text-primary" /></div>
@@ -463,19 +550,6 @@ const AdminDashboard = () => {
                 {savingSmtp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save SMTP
               </motion.button>
             </div>
-          </div>
-
-          {/* Email Automations */}
-          <div className="rounded-2xl glass-card shadow-soft p-5 space-y-3">
-            <h3 className="text-sm font-bold text-foreground">Email Automations</h3>
-            {['Invoice → Customer Email', 'Daily Sales Summary → Owner', 'Low Stock Alert → Owner', 'New Customer Welcome', 'Payment Confirmation'].map(auto => (
-              <div key={auto} className="flex items-center justify-between p-3 rounded-xl bg-secondary">
-                <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /><span className="text-sm text-foreground">{auto}</span></div>
-                <div className={`w-10 h-6 rounded-full relative ${smtpConfig.is_active ? 'bg-success/30' : 'bg-muted'}`}>
-                  <div className={`absolute top-0.5 w-5 h-5 rounded-full shadow transition-all ${smtpConfig.is_active ? 'right-0.5 bg-success' : 'left-0.5 bg-muted-foreground/30'}`} />
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
@@ -525,21 +599,6 @@ const AdminDashboard = () => {
               );
             })}
           </div>
-          <div className="rounded-2xl glass-card shadow-soft p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Gallery by Store Type</h3>
-            {Object.values(CATEGORY_CONFIGS).map(config => {
-              const count = galleryItems.filter(g => g.store_category === config.id).length;
-              const CatIcon = config.icon;
-              return (
-                <div key={config.id} className="flex items-center gap-3 py-1">
-                  <CatIcon className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-sm text-foreground flex-1">{config.name}</p>
-                  <span className="text-sm font-bold text-foreground">{count}</span>
-                  <div className="w-20 h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full gradient-primary" style={{ width: `${Math.min(100, (count / Math.max(galleryItems.length, 1)) * 100 * 5)}%` }} /></div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
 
@@ -574,24 +633,38 @@ const AdminDashboard = () => {
         <div className="space-y-4">
           <div className="rounded-2xl glass-card shadow-soft p-5">
             <h3 className="text-sm font-bold text-foreground">Subscription Plans</h3>
-            <p className="text-xs text-muted-foreground mt-1">Manage Free, Pro, and Enterprise tiers</p>
+            <p className="text-xs text-muted-foreground mt-1">Free and Pro tiers for store owners</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { name: 'Free', price: '₹0', features: ['5 Products', '50 Invoices/mo', 'Basic Store', 'Email Support'], color: 'border-border' },
-              { name: 'Pro', price: '₹499/mo', features: ['Unlimited Products', 'Unlimited Invoices', '4 Store Themes', 'Priority Support', 'Custom Domain', 'SMTP Email'], color: 'border-primary' },
-              { name: 'Enterprise', price: '₹1,999/mo', features: ['Everything in Pro', 'Multiple Staff', 'API Access', 'White Label', 'Dedicated Support', 'Custom Features'], color: 'border-accent' },
-            ].map(plan => (
-              <div key={plan.name} className={`rounded-2xl glass-card shadow-soft p-5 border-2 ${plan.color} space-y-3`}>
-                <h4 className="text-lg font-bold text-foreground">{plan.name}</h4>
-                <p className="text-2xl font-bold text-primary">{plan.price}</p>
-                <ul className="space-y-1.5">
-                  {plan.features.map(f => (
-                    <li key={f} className="text-xs text-muted-foreground flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-success shrink-0" /> {f}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {plans.map(plan => {
+              const features = Array.isArray(plan.features) ? plan.features : [];
+              const isPro = plan.name === 'Pro';
+              return (
+                <div key={plan.id} className={`rounded-2xl glass-card shadow-soft p-5 border-2 space-y-3 ${isPro ? 'border-primary' : 'border-border'}`}>
+                  {isPro && <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">POPULAR</span>}
+                  <h4 className="text-lg font-bold text-foreground">{plan.name}</h4>
+                  <p className="text-2xl font-bold text-primary">₹{plan.price}<span className="text-sm text-muted-foreground font-normal">/{plan.interval}</span></p>
+                  <ul className="space-y-1.5">
+                    {features.map((f: string) => (
+                      <li key={f} className="text-xs text-muted-foreground flex items-center gap-1.5"><CheckCircle className="w-3 h-3 text-success shrink-0" /> {f}</li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Pro plan extras */}
+          <div className="rounded-2xl glass-card shadow-soft p-5 space-y-3">
+            <h3 className="text-sm font-bold text-foreground">Enterprise Add-ons (Coming Soon)</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {['Multiple Staff', 'API Access', 'White Label', 'Dedicated Support', 'Custom Features'].map(f => (
+                <div key={f} className="flex items-center gap-2 p-2 rounded-lg bg-secondary">
+                  <CreditCard className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-xs text-foreground">{f}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -631,7 +704,7 @@ const AdminDashboard = () => {
                 <input type="number" value={form.discount_price} onChange={e => setForm(f => ({ ...f, discount_price: e.target.value }))}
                   className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground" /></div>
               <div><label className="text-xs text-muted-foreground mb-1 block">Tax %</label>
-                <input type="number" value={form.tax_percent} onChange={e => setForm(f => ({ ...f, tax_percent: e.target.value }))}
+                <input type="number" min="0" step="0.01" value={form.tax_percent} onChange={e => setForm(f => ({ ...f, tax_percent: e.target.value }))}
                   className="w-full px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground" /></div>
             </div>
             <div><label className="text-xs text-muted-foreground mb-1 block">SKU</label>

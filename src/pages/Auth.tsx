@@ -103,7 +103,7 @@ const Auth = () => {
           >
             <Car className="w-10 h-10 text-primary-foreground" />
           </motion.div>
-          <h1 className="text-2xl font-bold font-display text-foreground">ZEN POS</h1>
+          <h1 className="text-2xl font-bold font-display text-foreground">Welcome</h1>
           <p className="text-sm text-muted-foreground">Smart POS for your business</p>
         </div>
 
