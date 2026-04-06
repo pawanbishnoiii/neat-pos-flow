@@ -65,6 +65,47 @@ export type Database = {
         }
         Relationships: []
       }
+      business_subscriptions: {
+        Row: {
+          business_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          plan_id: string | null
+          plan_name: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          plan_id?: string | null
+          plan_name?: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          plan_id?: string | null
+          plan_name?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           address: string | null
@@ -815,6 +856,69 @@ export type Database = {
           sort_order?: number | null
           title?: string | null
           url?: string
+        }
+        Relationships: []
+      }
+      store_theme_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_pro_only: boolean
+          sort_order: number
+          theme_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_pro_only?: boolean
+          sort_order?: number
+          theme_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_pro_only?: boolean
+          sort_order?: number
+          theme_key?: string
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          currency: string
+          features: Json
+          id: string
+          interval: string
+          is_active: boolean
+          name: string
+          price: number
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          features?: Json
+          id?: string
+          interval?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          features?: Json
+          id?: string
+          interval?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          sort_order?: number
         }
         Relationships: []
       }
