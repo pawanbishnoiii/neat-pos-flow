@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, CartItem } from '@/store/useAppStore';
-import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, Percent, IndianRupee, QrCode, Search, UserPlus, X, CheckCircle, Volume2 } from 'lucide-react';
+import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, Percent, IndianRupee, QrCode, Search, UserPlus, X, CheckCircle, Volume2, CreditCard, BookOpen } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,9 +31,13 @@ const CartPanel = () => {
   const [showDiscount, setShowDiscount] = useState(false);
   const [discountType, setDiscountType] = useState<'percent' | 'flat'>('percent');
   const [discountValue, setDiscountValue] = useState('');
-  // UPI flow states
   const [showUpiQr, setShowUpiQr] = useState(false);
   const [upiApproved, setUpiApproved] = useState(false);
+  // Credit ledger state
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [showCredit, setShowCredit] = useState(false);
+  const [creditAmount, setCreditAmount] = useState('');
+  const [creditLoading, setCreditLoading] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const { business } = useBusiness();
   const { toast } = useToast();
@@ -56,6 +60,7 @@ const CartPanel = () => {
   const paymentMethods = [
     { id: 'cash', label: 'Cash', icon: Banknote },
     { id: 'upi', label: 'UPI', icon: Smartphone },
+    { id: 'credit', label: 'Credit', icon: CreditCard },
     { id: 'cod', label: 'COD', icon: FileText },
   ];
 
@@ -73,6 +78,21 @@ const CartPanel = () => {
     return () => clearTimeout(timer);
   }, [customerSearch, business?.id]);
 
+  // Fetch credit balance when customer selected
+  useEffect(() => {
+    if (!selectedCustomer?.id || !business || selectedCustomer.isNew) { setCreditBalance(0); return; }
+    const fetchCredit = async () => {
+      const { data } = await supabase.from('credit_ledger')
+        .select('balance_after')
+        .eq('business_id', business.id)
+        .eq('customer_id', selectedCustomer.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      setCreditBalance(data?.[0]?.balance_after ? Number(data[0].balance_after) : 0);
+    };
+    fetchCredit();
+  }, [selectedCustomer?.id, business?.id]);
+
   const selectCustomer = (c: any) => {
     setCustomerName(c.full_name || '');
     setCustomerPhone(c.phone || '');
@@ -88,10 +108,9 @@ const CartPanel = () => {
   const clearCustomer = () => {
     setCustomerName(''); setCustomerPhone(''); setCustomerEmail('');
     setVehicleNumber(''); setVehicleType(''); setSelectedCustomer(null);
-    setCustomerSearch('');
+    setCustomerSearch(''); setCreditBalance(0); setShowCredit(false);
   };
 
-  // Apply coupon
   const handleApplyCoupon = async () => {
     if (!business || !couponCode.trim()) return;
     const { data } = await supabase.from('business_offers').select('discount_percent, title')
@@ -113,20 +132,39 @@ const CartPanel = () => {
   };
 
   const canCharge = () => {
-    // Must have customer name or phone
     if (!customerName.trim() && !customerPhone.trim()) return false;
     if (cart.length === 0) return false;
-    // If UPI selected, must be approved
     if (paymentMethod === 'upi' && upiId && !upiApproved) return false;
     return true;
+  };
+
+  // Add/remove credit
+  const handleCreditAction = async (type: 'credit' | 'payment') => {
+    if (!business || !selectedCustomer?.id || selectedCustomer.isNew) return;
+    const amount = parseFloat(creditAmount);
+    if (!amount || amount <= 0) { toast({ title: 'Enter valid amount', variant: 'destructive' }); return; }
+    setCreditLoading(true);
+    const newBalance = type === 'credit' ? creditBalance + amount : Math.max(0, creditBalance - amount);
+    const { error } = await supabase.from('credit_ledger').insert({
+      business_id: business.id, customer_id: selectedCustomer.id,
+      amount, balance_after: newBalance, type,
+      notes: type === 'credit' ? 'Added from billing' : 'Payment from billing',
+    });
+    if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); }
+    else {
+      setCreditBalance(newBalance);
+      setCreditAmount('');
+      playBeep();
+      toast({ title: type === 'credit' ? 'Credit Added' : 'Payment Recorded', description: `Balance: ₹${newBalance.toFixed(0)}` });
+    }
+    setCreditLoading(false);
   };
 
   const handleCharge = async () => {
     if (!business) { toast({ title: 'Error', description: 'Set up business first', variant: 'destructive' }); playError(); return; }
     if (!customerName.trim() && !customerPhone.trim()) {
       toast({ title: 'Customer Required', description: 'Please add customer name or phone number', variant: 'destructive' });
-      playError();
-      return;
+      playError(); return;
     }
     setSaving(true);
     const invNum = generateInvoiceNumber();
@@ -168,6 +206,17 @@ const CartPanel = () => {
             last_visit_at: new Date().toISOString(), vehicle_type: vehicleType || undefined,
           }).eq('id', customerId);
         }
+      }
+
+      // Auto-add to credit ledger if payment method is credit
+      if (paymentMethod === 'credit' && customerId) {
+        const newBalance = creditBalance + grandTotal;
+        await supabase.from('credit_ledger').insert({
+          business_id: business.id, customer_id: customerId,
+          amount: grandTotal, balance_after: newBalance, type: 'credit',
+          notes: `Invoice ${invNum}`,
+        });
+        setCreditBalance(newBalance);
       }
 
       playSuccess();
@@ -212,11 +261,9 @@ const CartPanel = () => {
     });
     try {
       await sendToPrinter(printer.characteristic, receiptData);
-      playSuccess();
-      toast({ title: 'Printed!' });
+      playSuccess(); toast({ title: 'Printed!' });
     } catch (err: any) {
-      playError();
-      toast({ title: 'Print Error', description: err.message, variant: 'destructive' });
+      playError(); toast({ title: 'Print Error', description: err.message, variant: 'destructive' });
     }
   };
 
@@ -231,7 +278,8 @@ const CartPanel = () => {
     setShowInvoice(false); setCustomerName(''); setCustomerPhone(''); setVehicleNumber('');
     setVehicleType(''); setCustomerEmail(''); setCouponCode(''); setCouponDiscount(0);
     setDiscountValue(''); setSelectedCustomer(null); setShowUpiQr(false); setUpiApproved(false);
-    setShowDiscount(false); setCustomerSearch(''); clearCart();
+    setShowDiscount(false); setCustomerSearch(''); setShowCredit(false); setCreditAmount('');
+    setCreditBalance(0); clearCart();
   };
 
   // Invoice view
@@ -241,7 +289,7 @@ const CartPanel = () => {
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <h2 className="text-lg font-bold font-display text-foreground">Invoice</h2>
           <motion.button whileTap={{ scale: 0.95 }} onClick={handleConnectPrinter}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${printer.connected ? 'bg-success/10 text-success' : 'bg-secondary text-secondary-foreground'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${printer.connected ? 'bg-emerald-500/10 text-emerald-500' : 'bg-secondary text-secondary-foreground'}`}>
             <Printer className="w-3.5 h-3.5" />{printer.connected ? 'Connected' : 'Connect'}
           </motion.button>
         </div>
@@ -259,7 +307,7 @@ const CartPanel = () => {
               <Printer className="w-4 h-4" /> Print
             </motion.button>
             <motion.button whileTap={{ scale: 0.95 }} onClick={handleShareWhatsApp}
-              className="flex-1 py-3 rounded-xl bg-success/10 text-success text-sm font-semibold flex items-center justify-center gap-2">
+              className="flex-1 py-3 rounded-xl bg-emerald-500/10 text-emerald-500 text-sm font-semibold flex items-center justify-center gap-2">
               <Share2 className="w-4 h-4" /> WhatsApp
             </motion.button>
           </div>
@@ -284,7 +332,7 @@ const CartPanel = () => {
           <h2 className="text-lg font-bold font-display text-foreground">Cart</h2>
           <div className="flex items-center gap-2">
             <motion.button whileTap={{ scale: 0.95 }} onClick={handleConnectPrinter}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1 ${printer.connected ? 'bg-success/10 text-success' : 'bg-secondary text-secondary-foreground'}`}>
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1 ${printer.connected ? 'bg-emerald-500/10 text-emerald-500' : 'bg-secondary text-secondary-foreground'}`}>
               <Printer className="w-3 h-3" />{printer.connected ? '✓' : 'Printer'}
             </motion.button>
             <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/10 text-primary">{cart.length} items</span>
@@ -319,23 +367,64 @@ const CartPanel = () => {
               ))}
             </AnimatePresence>
 
-            {/* Customer Section - Combined search + add */}
+            {/* Customer Section */}
             <div className="space-y-2 pt-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><UserCheck className="w-3 h-3" /> Customer <span className="text-destructive">*</span></p>
 
               {selectedCustomer ? (
                 <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl bg-primary/5 border border-primary/20 p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><UserCheck className="w-4 h-4 text-primary" /></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{selectedCustomer.full_name}</p>
-                    <p className="text-[10px] text-muted-foreground">{selectedCustomer.phone || selectedCustomer.email || ''} • {selectedCustomer.visit_count || 0} visits</p>
+                  className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><UserCheck className="w-4 h-4 text-primary" /></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{selectedCustomer.full_name}</p>
+                      <p className="text-[10px] text-muted-foreground">{selectedCustomer.phone || selectedCustomer.email || ''} • {selectedCustomer.visit_count || 0} visits</p>
+                    </div>
+                    <button onClick={clearCustomer} className="p-1.5 rounded-lg hover:bg-destructive/10"><X className="w-3.5 h-3.5 text-destructive" /></button>
                   </div>
-                  <button onClick={clearCustomer} className="p-1.5 rounded-lg hover:bg-destructive/10"><X className="w-3.5 h-3.5 text-destructive" /></button>
+
+                  {/* Credit Balance Display */}
+                  {selectedCustomer.id && !selectedCustomer.isNew && (
+                    <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <BookOpen className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="text-xs font-semibold text-foreground">Credit (Udhar)</span>
+                        </div>
+                        <span className={`text-sm font-bold ${creditBalance > 0 ? 'text-destructive' : 'text-emerald-500'}`}>
+                          ₹{creditBalance.toFixed(0)}
+                        </span>
+                      </div>
+                      <button onClick={() => setShowCredit(!showCredit)} className="text-[10px] text-primary font-semibold mt-1 hover:underline">
+                        {showCredit ? 'Hide' : 'Manage Credit →'}
+                      </button>
+                      <AnimatePresence>
+                        {showCredit && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-2 space-y-2">
+                            <input type="number" placeholder="Amount" value={creditAmount} onChange={e => setCreditAmount(e.target.value)}
+                              className="w-full px-3 py-1.5 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                            <div className="flex gap-2">
+                              <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCreditAction('credit')} disabled={creditLoading}
+                                className="flex-1 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold flex items-center justify-center gap-1">
+                                <Plus className="w-3 h-3" /> Add Credit
+                              </motion.button>
+                              <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCreditAction('payment')} disabled={creditLoading}
+                                className="flex-1 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 text-xs font-semibold flex items-center justify-center gap-1">
+                                <Minus className="w-3 h-3" /> Payment
+                              </motion.button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* Vehicle Number */}
+                  <input type="text" placeholder="Vehicle # (optional)" value={vehicleNumber} onChange={e => setVehicleNumber(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-1.5 rounded-lg bg-background border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </motion.div>
               ) : (
                 <div className="space-y-2">
-                  {/* Search bar */}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                     <input type="text" placeholder="Search or add customer..." value={customerSearch}
@@ -343,9 +432,8 @@ const CartPanel = () => {
                       className="w-full pl-9 pr-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
 
-                  {/* Suggestions dropdown */}
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="rounded-xl border border-border bg-card shadow-elevated overflow-hidden max-h-36 overflow-y-auto">
+                    <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden max-h-36 overflow-y-auto">
                       {suggestions.map((s) => (
                         <button key={s.id} onClick={() => selectCustomer(s)} className="w-full flex items-center gap-2.5 p-2.5 text-left hover:bg-muted/50 text-sm border-b border-border last:border-0">
                           <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><UserCheck className="w-3 h-3 text-primary" /></div>
@@ -359,7 +447,6 @@ const CartPanel = () => {
                     </div>
                   )}
 
-                  {/* Inline new customer fields */}
                   <div className="flex gap-2">
                     <input type="tel" placeholder="Phone *" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
                       className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
@@ -367,7 +454,6 @@ const CartPanel = () => {
                       className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
 
-                  {/* Auto-add as new customer when name or phone filled */}
                   {(customerName.trim() || customerPhone.trim()) && !selectedCustomer && suggestions.length === 0 && customerSearch.length >= 2 && (
                     <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} whileTap={{ scale: 0.95 }}
                       onClick={() => { setSelectedCustomer({ full_name: customerName, phone: customerPhone, email: customerEmail, visit_count: 0, isNew: true }); playBeep(); }}
@@ -379,11 +465,11 @@ const CartPanel = () => {
               )}
             </div>
 
-            {/* Discount - Small toggle button */}
+            {/* Discount */}
             <div className="space-y-2 pt-1">
               <button onClick={() => setShowDiscount(!showDiscount)}
                 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1 hover:text-primary transition-colors">
-                <Tag className="w-3 h-3" /> Discount {manualDiscount > 0 && <span className="text-success ml-1">−₹{manualDiscount.toFixed(0)}</span>}
+                <Tag className="w-3 h-3" /> Discount {manualDiscount > 0 && <span className="text-emerald-500 ml-1">−₹{manualDiscount.toFixed(0)}</span>}
               </button>
               <AnimatePresence>
                 {showDiscount && (
@@ -416,7 +502,7 @@ const CartPanel = () => {
                   className="flex-1 px-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 <button onClick={handleApplyCoupon} className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold">Apply</button>
               </div>
-              {couponDiscount > 0 && <p className="text-xs text-success font-medium">Coupon: {couponDiscount}% off (−₹{couponAmount.toFixed(0)})</p>}
+              {couponDiscount > 0 && <p className="text-xs text-emerald-500 font-medium">Coupon: {couponDiscount}% off (−₹{couponAmount.toFixed(0)})</p>}
             </div>
           </>
         )}
@@ -425,20 +511,20 @@ const CartPanel = () => {
       {cart.length > 0 && (
         <div className="border-t border-border p-4 space-y-3">
           {/* Payment Methods */}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {paymentMethods.map(pm => {
               const Icon = pm.icon;
               return (
                 <motion.button key={pm.id} whileTap={{ scale: 0.95 }}
                   onClick={() => { setPaymentMethod(pm.id); setShowUpiQr(false); setUpiApproved(false); }}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-colors ${paymentMethod === pm.id ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
+                  className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-medium transition-colors ${paymentMethod === pm.id ? 'gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
                   <Icon className="w-3.5 h-3.5" />{pm.label}
                 </motion.button>
               );
             })}
           </div>
 
-          {/* UPI Flow: Show QR after clicking Pay, then Approve */}
+          {/* UPI Flow */}
           <AnimatePresence>
             {showUpiQr && upiId && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -452,11 +538,11 @@ const CartPanel = () => {
                 {!upiApproved ? (
                   <motion.button whileTap={{ scale: 0.95 }}
                     onClick={() => { setUpiApproved(true); playSuccess(); toast({ title: 'Payment Approved!' }); }}
-                    className="w-full py-2.5 rounded-xl bg-success/10 text-success text-sm font-bold flex items-center justify-center gap-2">
+                    className="w-full py-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 text-sm font-bold flex items-center justify-center gap-2">
                     <CheckCircle className="w-4 h-4" /> Approve Payment
                   </motion.button>
                 ) : (
-                  <div className="flex items-center gap-2 text-success text-sm font-semibold">
+                  <div className="flex items-center gap-2 text-emerald-500 text-sm font-semibold">
                     <CheckCircle className="w-4 h-4" /> Payment Approved ✓
                   </div>
                 )}
@@ -468,12 +554,15 @@ const CartPanel = () => {
           <div className="space-y-1 text-sm">
             <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
             <div className="flex justify-between text-muted-foreground"><span>Tax</span><span>₹{taxTotal.toFixed(0)}</span></div>
-            {manualDiscount > 0 && <div className="flex justify-between text-success"><span>Discount</span><span>−₹{manualDiscount.toFixed(0)}</span></div>}
-            {couponAmount > 0 && <div className="flex justify-between text-success"><span>Coupon</span><span>−₹{couponAmount.toFixed(0)}</span></div>}
+            {manualDiscount > 0 && <div className="flex justify-between text-emerald-500"><span>Discount</span><span>−₹{manualDiscount.toFixed(0)}</span></div>}
+            {couponAmount > 0 && <div className="flex justify-between text-emerald-500"><span>Coupon</span><span>−₹{couponAmount.toFixed(0)}</span></div>}
             <div className="flex justify-between text-base font-bold pt-1 border-t border-border text-foreground"><span>Total</span><span className="gradient-primary-text">₹{grandTotal.toFixed(0)}</span></div>
+            {paymentMethod === 'credit' && selectedCustomer && (
+              <div className="flex justify-between text-xs text-amber-500 pt-1"><span>New Credit Balance</span><span>₹{(creditBalance + grandTotal).toFixed(0)}</span></div>
+            )}
           </div>
 
-          {/* Validation message */}
+          {/* Validation */}
           {(!customerName.trim() && !customerPhone.trim()) && (
             <p className="text-[10px] text-destructive font-medium text-center">⚠ Customer name or phone required to bill</p>
           )}
@@ -491,7 +580,7 @@ const CartPanel = () => {
               <motion.button whileTap={{ scale: 0.95 }} onClick={handleCharge} disabled={saving || !canCharge()}
                 className="flex-[2] py-3 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary flex items-center justify-center gap-2 disabled:opacity-50">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                {paymentMethod === 'upi' && upiApproved ? 'Print Bill' : `Charge ₹${grandTotal.toFixed(0)}`}
+                {paymentMethod === 'credit' ? `Credit ₹${grandTotal.toFixed(0)}` : paymentMethod === 'upi' && upiApproved ? 'Print Bill' : `Charge ₹${grandTotal.toFixed(0)}`}
               </motion.button>
             )}
           </div>
