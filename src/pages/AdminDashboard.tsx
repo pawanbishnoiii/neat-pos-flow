@@ -436,49 +436,68 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Theme Management */}
+      {/* Theme Management - Upgraded */}
       {activeTab === 'themes' && (
         <div className="space-y-4">
           <div className="rounded-2xl glass-card shadow-soft p-5">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Palette className="w-6 h-6 text-primary" /></div>
-              <div><h3 className="text-sm font-bold text-foreground">Store Theme Management</h3><p className="text-xs text-muted-foreground">Control which themes are available and which are Pro-only</p></div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Store Theme Management</h3>
+                <p className="text-xs text-muted-foreground">Control which themes are available and which are Pro-only</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 mt-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-success/5 border border-success/20">
+                <Eye className="w-3 h-3 text-success" />
+                <span className="text-xs font-medium text-foreground">{themeSettings.filter(t => t.is_active).length} Active</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning/5 border border-warning/20">
+                <CreditCard className="w-3 h-3 text-warning" />
+                <span className="text-xs font-medium text-foreground">{themeSettings.filter(t => t.is_pro_only).length} Pro Only</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-destructive/5 border border-destructive/20">
+                <EyeOff className="w-3 h-3 text-destructive" />
+                <span className="text-xs font-medium text-foreground">{themeSettings.filter(t => !t.is_active).length} Hidden</span>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {themeSettings.map(ts => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {themeSettings.map((ts, idx) => {
               const info = STORE_THEMES_INFO[ts.theme_key] || { label: ts.theme_key, emoji: '🎨', desc: '' };
+              const storesUsing = allBusinesses.filter(b => b.store_theme === ts.theme_key);
               return (
-                <div key={ts.id} className={`rounded-2xl glass-card shadow-soft p-4 space-y-3 border-2 transition-colors ${ts.is_active ? 'border-success/30' : 'border-destructive/30 opacity-60'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{info.emoji}</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">{info.label}</p>
-                      <p className="text-xs text-muted-foreground">{info.desc}</p>
-                    </div>
+                <motion.div key={ts.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
+                  className={`rounded-2xl glass-card shadow-soft overflow-hidden border-2 transition-all hover:shadow-elevated ${ts.is_active ? 'border-success/30' : 'border-destructive/30 opacity-70'}`}>
+                  {/* Theme preview header */}
+                  <div className="h-20 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/5 flex items-center justify-center relative">
+                    <span className="text-4xl">{info.emoji}</span>
+                    {ts.is_pro_only && (
+                      <span className="absolute top-2 right-2 text-[9px] px-2 py-0.5 rounded-full bg-warning/20 text-warning font-bold border border-warning/30">PRO</span>
+                    )}
+                    {storesUsing.length > 0 && (
+                      <span className="absolute top-2 left-2 text-[9px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-bold">{storesUsing.length} store{storesUsing.length > 1 ? 's' : ''}</span>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{info.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{info.desc}</p>
+                    </div>
                     <div className="flex items-center gap-2">
                       <button onClick={() => handleToggleTheme(ts.id, 'is_active', ts.is_active)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${ts.is_active ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
-                        {ts.is_active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${ts.is_active ? 'bg-success/10 text-success hover:bg-success/20' : 'bg-destructive/10 text-destructive hover:bg-destructive/20'}`}>
+                        {ts.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                         {ts.is_active ? 'Active' : 'Hidden'}
                       </button>
                       <button onClick={() => handleToggleTheme(ts.id, 'is_pro_only', ts.is_pro_only)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${ts.is_pro_only ? 'bg-warning/10 text-warning' : 'bg-secondary text-secondary-foreground'}`}>
-                        <CreditCard className="w-3 h-3" />
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${ts.is_pro_only ? 'bg-warning/10 text-warning hover:bg-warning/20' : 'bg-secondary text-secondary-foreground hover:bg-muted'}`}>
+                        <CreditCard className="w-3.5 h-3.5" />
                         {ts.is_pro_only ? 'Pro Only' : 'Free'}
                       </button>
                     </div>
                   </div>
-                  {/* Show stores using this theme */}
-                  {(() => {
-                    const storesUsing = allBusinesses.filter(b => b.store_theme === ts.theme_key);
-                    return storesUsing.length > 0 ? (
-                      <p className="text-[10px] text-muted-foreground">{storesUsing.length} store(s) using this theme</p>
-                    ) : null;
-                  })()}
-                </div>
+                </motion.div>
               );
             })}
           </div>

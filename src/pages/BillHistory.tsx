@@ -158,7 +158,8 @@ const BillHistory = () => {
         </div>
       )}
 
-      {selected && <InvoiceDetailDialog open={!!selected} onClose={() => setSelected(null)} invoice={selected} businessName={business?.business_name} />}
+      {selected && <InvoiceDetailDialog open={!!selected} onClose={() => setSelected(null)} invoice={selected} businessName={business?.business_name}
+        onDeleted={() => { setInvoices(prev => prev.filter(i => i.id !== selected.id)); setSelected(null); }} />}
     </div>
   );
 };
