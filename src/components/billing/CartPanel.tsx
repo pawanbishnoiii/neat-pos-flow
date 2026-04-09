@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore, CartItem } from '@/store/useAppStore';
-import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, Percent, IndianRupee, QrCode, Search, UserPlus, X, CheckCircle, Volume2, CreditCard, BookOpen } from 'lucide-react';
+import { Minus, Plus, Trash2, Banknote, Smartphone, Printer, FileText, Loader2, UserCheck, Share2, Tag, Percent, IndianRupee, QrCode, Search, UserPlus, X, CheckCircle, Volume2, CreditCard, BookOpen, Car, Phone, Mail } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useBusiness } from '@/hooks/useBusiness';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,7 +33,6 @@ const CartPanel = () => {
   const [discountValue, setDiscountValue] = useState('');
   const [showUpiQr, setShowUpiQr] = useState(false);
   const [upiApproved, setUpiApproved] = useState(false);
-  // Credit ledger state
   const [creditBalance, setCreditBalance] = useState(0);
   const [showCredit, setShowCredit] = useState(false);
   const [creditAmount, setCreditAmount] = useState('');
@@ -64,13 +63,13 @@ const CartPanel = () => {
     { id: 'cod', label: 'COD', icon: FileText },
   ];
 
-  // Customer search
+  // Customer search with name, phone, email, vehicle_number
   useEffect(() => {
     if (!business || customerSearch.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
     const timer = setTimeout(async () => {
       const { data } = await supabase.from('customers').select('id, full_name, phone, email, vehicle_number, vehicle_type, visit_count, total_spent')
         .eq('business_id', business.id)
-        .or(`phone.ilike.%${customerSearch}%,full_name.ilike.%${customerSearch}%,email.ilike.%${customerSearch}%`)
+        .or(`phone.ilike.%${customerSearch}%,full_name.ilike.%${customerSearch}%,email.ilike.%${customerSearch}%,vehicle_number.ilike.%${customerSearch}%`)
         .limit(8);
       setSuggestions(data || []);
       setShowSuggestions((data || []).length > 0);
@@ -138,7 +137,6 @@ const CartPanel = () => {
     return true;
   };
 
-  // Add/remove credit
   const handleCreditAction = async (type: 'credit' | 'payment') => {
     if (!business || !selectedCustomer?.id || selectedCustomer.isNew) return;
     const amount = parseFloat(creditAmount);
@@ -208,7 +206,6 @@ const CartPanel = () => {
         }
       }
 
-      // Auto-add to credit ledger if payment method is credit
       if (paymentMethod === 'credit' && customerId) {
         const newBalance = creditBalance + grandTotal;
         await supabase.from('credit_ledger').insert({
@@ -367,7 +364,7 @@ const CartPanel = () => {
               ))}
             </AnimatePresence>
 
-            {/* Customer Section */}
+            {/* Customer Section - Upgraded */}
             <div className="space-y-2 pt-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><UserCheck className="w-3 h-3" /> Customer <span className="text-destructive">*</span></p>
 
@@ -378,7 +375,15 @@ const CartPanel = () => {
                     <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><UserCheck className="w-4 h-4 text-primary" /></div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{selectedCustomer.full_name}</p>
-                      <p className="text-[10px] text-muted-foreground">{selectedCustomer.phone || selectedCustomer.email || ''} • {selectedCustomer.visit_count || 0} visits</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {selectedCustomer.phone && (
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Phone className="w-2.5 h-2.5" />{selectedCustomer.phone}</span>
+                        )}
+                        {selectedCustomer.vehicle_number && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 font-medium flex items-center gap-0.5"><Car className="w-2.5 h-2.5" />{selectedCustomer.vehicle_number}</span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground">{selectedCustomer.visit_count || 0} visits</span>
+                      </div>
                     </div>
                     <button onClick={clearCustomer} className="p-1.5 rounded-lg hover:bg-destructive/10"><X className="w-3.5 h-3.5 text-destructive" /></button>
                   </div>
@@ -427,24 +432,39 @@ const CartPanel = () => {
                 <div className="space-y-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                    <input type="text" placeholder="Search or add customer..." value={customerSearch}
+                    <input type="text" placeholder="Search name, phone, vehicle..." value={customerSearch}
                       onChange={e => { setCustomerSearch(e.target.value); setCustomerName(e.target.value); }}
                       className="w-full pl-9 pr-3 py-2 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
 
+                  {/* Enhanced Suggestions with name, phone, vehicle */}
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden max-h-36 overflow-y-auto">
+                    <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                      className="rounded-xl border border-border bg-card shadow-lg overflow-hidden max-h-48 overflow-y-auto">
                       {suggestions.map((s) => (
-                        <button key={s.id} onClick={() => selectCustomer(s)} className="w-full flex items-center gap-2.5 p-2.5 text-left hover:bg-muted/50 text-sm border-b border-border last:border-0">
-                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><UserCheck className="w-3 h-3 text-primary" /></div>
+                        <button key={s.id} onClick={() => selectCustomer(s)} className="w-full flex items-center gap-2.5 p-2.5 text-left hover:bg-muted/50 text-sm border-b border-border last:border-0 transition-colors">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><UserCheck className="w-3.5 h-3.5 text-primary" /></div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-foreground truncate text-xs">{s.full_name}</p>
-                            <p className="text-[10px] text-muted-foreground">{s.phone || ''} {s.email ? `• ${s.email}` : ''}</p>
+                            <p className="font-semibold text-foreground truncate text-xs">{s.full_name || 'Unknown'}</p>
+                            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                              {s.phone && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Phone className="w-2 h-2" />{s.phone}</span>
+                              )}
+                              {s.vehicle_number && (
+                                <span className="text-[10px] px-1 py-0 rounded bg-blue-500/10 text-blue-500 font-medium flex items-center gap-0.5"><Car className="w-2 h-2" />{s.vehicle_number}</span>
+                              )}
+                              {s.email && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Mail className="w-2 h-2" />{s.email}</span>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-[10px] text-muted-foreground shrink-0">₹{Number(s.total_spent || 0).toFixed(0)}</span>
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] font-medium text-foreground">₹{Number(s.total_spent || 0).toFixed(0)}</span>
+                            <p className="text-[9px] text-muted-foreground">{s.visit_count || 0} visits</p>
+                          </div>
                         </button>
                       ))}
-                    </div>
+                    </motion.div>
                   )}
 
                   <div className="flex gap-2">
