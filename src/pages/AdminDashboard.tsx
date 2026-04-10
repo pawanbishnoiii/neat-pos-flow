@@ -690,7 +690,72 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Gallery Form Dialog */}
+      {/* Backup */}
+      {activeTab === 'backup' && (
+        <div className="space-y-4">
+          <div className="rounded-2xl glass-card shadow-soft p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Database className="w-6 h-6 text-primary" /></div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Platform Backup & Data</h3>
+                <p className="text-xs text-muted-foreground">Export/import all platform data for disaster recovery</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Platform-wide export */}
+          <div className="rounded-2xl glass-card shadow-soft p-5 space-y-3">
+            <p className="text-sm font-semibold text-foreground">Export All Businesses</p>
+            <p className="text-xs text-muted-foreground">Download a combined backup of all {allBusinesses.length} businesses in the platform</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                { label: 'Businesses', count: allBusinesses.length },
+                { label: 'Users', count: allProfiles.length },
+                { label: 'Products', count: stats.products },
+                { label: 'Invoices', count: stats.invoices },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl bg-secondary p-3 text-center">
+                  <p className="text-lg font-bold text-foreground">{s.count}</p>
+                  <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                </div>
+              ))}
+            </div>
+            <button onClick={async () => {
+              const backup = {
+                version: '2.0', exported_at: new Date().toISOString(), type: 'platform',
+                businesses: allBusinesses, users: allProfiles, stats,
+              };
+              const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url;
+              a.download = `ezo-platform-backup-${new Date().toISOString().slice(0, 10)}.json`;
+              document.body.appendChild(a); a.click(); document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              toast({ title: 'Platform backup exported!' });
+            }} className="px-6 py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center gap-2">
+              <Database className="w-4 h-4" /> Export Platform Data
+            </button>
+          </div>
+
+          {/* Gallery export */}
+          <div className="rounded-2xl glass-card shadow-soft p-5 space-y-3">
+            <p className="text-sm font-semibold text-foreground">Export Gallery Products</p>
+            <p className="text-xs text-muted-foreground">{galleryItems.length} products in gallery catalog</p>
+            <button onClick={() => {
+              const blob = new Blob([JSON.stringify(galleryItems, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url;
+              a.download = `ezo-gallery-${new Date().toISOString().slice(0, 10)}.json`;
+              document.body.appendChild(a); a.click(); document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              toast({ title: 'Gallery exported!' });
+            }} className="px-6 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-semibold flex items-center gap-2 hover:bg-muted transition-colors">
+              <Package className="w-4 h-4" /> Export Gallery
+            </button>
+          </div>
+        </div>
+      )}
+
       <Dialog open={showGalleryForm} onOpenChange={open => !open && closeForm()}>
         <DialogContent className="rounded-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingItem ? 'Edit Product' : 'Add Product'}</DialogTitle><DialogDescription>Gallery product for store owners</DialogDescription></DialogHeader>

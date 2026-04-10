@@ -19,6 +19,7 @@ const STORE_THEMES = [
   { id: 'bold', label: 'Bold', emoji: '🔥', desc: 'Vibrant, large typography' },
   { id: 'luxury', label: 'Luxury', emoji: '👑', desc: 'Dark, gold accents, serif fonts' },
   { id: 'auto_service', label: 'Auto Service', emoji: '🚗', desc: 'Premium automotive & car wash' },
+  { id: 'car_wash', label: 'Car Wash', emoji: '💧', desc: 'Immersive wash center theme' },
   { id: 'grocery', label: 'Grocery', emoji: '🛒', desc: 'Fresh grocery & general store' },
   { id: 'fashion', label: 'Fashion', emoji: '👗', desc: 'Elegant fashion & beauty' },
   { id: 'bookshop', label: 'Bookshop', emoji: '📚', desc: 'Warm bookshop & education' },
