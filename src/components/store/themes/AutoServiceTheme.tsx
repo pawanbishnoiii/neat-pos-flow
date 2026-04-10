@@ -4,7 +4,7 @@ import { ShoppingBag, Star, MapPin, Phone, Wrench, Car, Shield, Zap, Clock, Awar
 import BannerSlideshow from '../BannerSlideshow';
 import OffersSection from '../OffersSection';
 import VideoSection from '../VideoSection';
-import StoreFooter from '../StoreFooter';
+import MotionFooter from '@/components/ui/motion-footer';
 
 interface ThemeProps {
   business: any;
@@ -248,7 +248,7 @@ const AutoServiceTheme = ({ business, products, reviews, banners, offers, videos
         </div>
       </section>
 
-      <StoreFooter business={business} theme={theme} />
+      <MotionFooter business={business} theme={theme} />
     </div>
   );
 };

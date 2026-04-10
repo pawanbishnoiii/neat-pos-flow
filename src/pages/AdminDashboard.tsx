@@ -17,12 +17,13 @@ const STORE_THEMES_INFO: Record<string, { label: string; emoji: string; desc: st
   bold: { label: 'Bold', emoji: '🔥', desc: 'Vibrant, large typography' },
   luxury: { label: 'Luxury', emoji: '👑', desc: 'Dark, gold accents, serif' },
   auto_service: { label: 'Auto Service', emoji: '🚗', desc: 'Premium automotive' },
+  car_wash: { label: 'Car Wash', emoji: '💧', desc: 'Immersive wash center' },
   grocery: { label: 'Grocery', emoji: '🛒', desc: 'Fresh grocery store' },
   fashion: { label: 'Fashion', emoji: '👗', desc: 'Elegant fashion' },
   bookshop: { label: 'Bookshop', emoji: '📚', desc: 'Warm bookshop' },
 };
 
-type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features' | 'smtp' | 'notifications' | 'analytics' | 'subscriptions' | 'themes';
+type AdminTab = 'overview' | 'gallery' | 'users' | 'businesses' | 'features' | 'smtp' | 'notifications' | 'analytics' | 'subscriptions' | 'themes' | 'backup';
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -64,6 +65,7 @@ const AdminDashboard = () => {
     if (path.includes('/admin/analytics')) return 'analytics';
     if (path.includes('/admin/subscriptions')) return 'subscriptions';
     if (path.includes('/admin/themes')) return 'themes';
+    if (path.includes('/admin/backup')) return 'backup';
     return 'overview';
   };
 
@@ -74,7 +76,7 @@ const AdminDashboard = () => {
       overview: '/admin', gallery: '/admin/gallery', businesses: '/admin/stores',
       users: '/admin/users', smtp: '/admin/smtp', notifications: '/admin/alerts',
       features: '/admin/features', analytics: '/admin/analytics', subscriptions: '/admin/subscriptions',
-      themes: '/admin/themes',
+      themes: '/admin/themes', backup: '/admin/backup',
     };
     navigate(pathMap[tabId] || '/admin');
   };
