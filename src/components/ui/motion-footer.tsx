@@ -9,7 +9,7 @@ interface MotionFooterProps {
   className?: string;
 }
 
-const MagneticButton = React.forwardRef<HTMLElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { as?: React.ElementType }>(
+const MagneticButton = React.forwardRef<HTMLElement, any>(
   ({ className, children, as: Component = "button", ...props }, forwardedRef) => {
     const localRef = useRef<HTMLElement>(null);
 

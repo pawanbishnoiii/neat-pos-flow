@@ -15,6 +15,7 @@ import AutoServiceTheme from '@/components/store/themes/AutoServiceTheme';
 import GroceryTheme from '@/components/store/themes/GroceryTheme';
 import FashionTheme from '@/components/store/themes/FashionTheme';
 import BookshopTheme from '@/components/store/themes/BookshopTheme';
+import CarWashTheme from '@/components/store/themes/CarWashTheme';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LottieAnimation from '@/components/common/LottieAnimation';
@@ -22,6 +23,7 @@ import LottieAnimation from '@/components/common/LottieAnimation';
 const STORE_THEMES_MAP: Record<string, any> = {
   starter: StarterTheme, modern: ModernTheme, bold: BoldTheme, luxury: LuxuryTheme,
   auto_service: AutoServiceTheme, grocery: GroceryTheme, fashion: FashionTheme, bookshop: BookshopTheme,
+  car_wash: CarWashTheme,
 };
 
 const AnimSection = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => {
