@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "installCommand": "npm ci --cache /tmp/neat-pos-flow-npm-cache --no-audit --no-fund",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
