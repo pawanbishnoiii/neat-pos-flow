@@ -26,10 +26,10 @@ const STORE_THEMES_MAP: Record<string, any> = {
   car_wash: CarWashTheme,
 };
 
-const AnimSection = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => {
+const AnimSection = ({ children, className = '', style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) => {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-40px' });
-  return <motion.div ref={ref} initial={{ opacity: 0, y: 30 }} animate={inView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.5 }} className={className}>{children}</motion.div>;
+  return <motion.div ref={ref} initial={{ opacity: 0, y: 30 }} animate={inView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.5 }} className={className} style={style}>{children}</motion.div>;
 };
 
 // Loading skeleton
