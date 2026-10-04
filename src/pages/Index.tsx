@@ -136,6 +136,21 @@ const Index = () => {
           </div>
         </section>
 
+        <section className="relative overflow-hidden bg-[#141b34] py-4 text-white">
+          <motion.div
+            className="flex w-max items-center gap-3"
+            animate={reduceMotion ? undefined : { x: ['0%', '-50%'] }}
+            transition={{ duration: 28, repeat: Infinity, ease: 'linear' }}
+          >
+            {[...shopTypes, ...shopTypes, ...shopTypes, ...shopTypes].map((type, index) => (
+              <div key={`${type}-${index}`} className="flex items-center gap-3 whitespace-nowrap px-4 font-display text-sm font-extrabold uppercase tracking-[.12em] text-white/75">
+                <span className={`h-2.5 w-2.5 rounded-full ${index % 4 === 0 ? 'bg-[#ff5d3b]' : index % 4 === 1 ? 'bg-[#c9f26a]' : index % 4 === 2 ? 'bg-[#c9b6ff]' : 'bg-[#ffd84d]'}`} />
+                Made for {type}
+              </div>
+            ))}
+          </motion.div>
+        </section>
+
         <section id="features" className="px-4 py-24 md:px-8 md:py-32">
           <div className="mx-auto max-w-[1240px]">
             <SectionTitle eyebrow="One home for your business" title={<>Serious tools.<br /><span className="text-[#3568f5]">Zero boring bits.</span></>} copy="Every essential is thoughtfully connected, so your day feels lighter and your decisions get sharper." />
@@ -145,12 +160,51 @@ const Index = () => {
           </div>
         </section>
 
+        <section className="relative overflow-hidden bg-gradient-to-b from-[#efe9ff] via-[#e8f1ff] to-[#fbf8f2] px-4 py-24 md:px-8 md:py-32">
+          <div className="absolute left-[-8rem] top-[-7rem] h-80 w-80 rounded-full bg-[#ff8b72]/30 blur-3xl" />
+          <div className="absolute bottom-[-9rem] right-[-5rem] h-96 w-96 rounded-full bg-[#c9f26a]/35 blur-3xl" />
+          <div className="relative mx-auto max-w-[1240px]">
+            <SectionTitle eyebrow="A more human workspace" title={<>Tools with personality.<br /><span className="text-[#7050db]">Power without the grey.</span></>} copy="Playful on the surface, serious underneath. Every interaction is tuned to feel quick, clear and surprisingly satisfying." />
+            <div className="mt-14 grid gap-5 lg:grid-cols-3">
+              {[
+                { image: '/images/clay-pos-terminal.png', title: 'Checkout, reimagined', copy: 'Tap, scan, print and share without breaking your flow.', color: 'from-[#ff7659] to-[#ffb04e]', tag: 'SELL' },
+                { image: '/images/clay-retail-categories.png', title: 'Made for your kind of shop', copy: 'A tailored setup for groceries, fashion, cafés, salons and more.', color: 'from-[#7358dd] to-[#b59cff]', tag: 'ADAPT' },
+                { image: '/images/clay-analytics-icons.png', title: 'Clarity at a glance', copy: 'The numbers that matter, surfaced before you need to ask.', color: 'from-[#2458dd] to-[#62a4ff]', tag: 'GROW' },
+              ].map((item, index) => (
+                <motion.article
+                  key={item.title}
+                  whileHover={reduceMotion ? undefined : { y: -10, rotate: index === 1 ? 0 : index === 0 ? -1 : 1 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                  className={`reveal group relative min-h-[520px] overflow-hidden rounded-[38px] bg-gradient-to-br ${item.color} p-5 shadow-[0_24px_60px_rgba(34,37,68,.14)]`}
+                >
+                  <div className="absolute inset-x-4 top-4 flex items-center justify-between rounded-2xl border border-white/30 bg-white/15 px-4 py-3 text-white backdrop-blur-xl">
+                    <span className="text-[10px] font-black tracking-[.22em]">{item.tag}</span>
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <motion.img
+                    src={item.image}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-x-[-14%] top-12 h-[66%] w-[128%] object-contain drop-shadow-[0_28px_34px_rgba(18,21,45,.28)]"
+                    animate={reduceMotion ? undefined : { y: [0, -10, 0], rotate: index === 1 ? [0, 1, 0] : [0, -1, 0] }}
+                    transition={{ duration: 5 + index, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  <div className="absolute inset-x-4 bottom-4 rounded-[27px] border border-white/60 bg-white/85 p-6 text-[#141b34] shadow-xl backdrop-blur-2xl">
+                    <h3 className="font-display text-2xl font-black tracking-[-.045em]">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#5f6577]">{item.copy}</p>
+                  </div>
+                </motion.article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="product" className="bg-[#141b34] px-4 py-24 text-white md:px-8 md:py-32">
           <div className="mx-auto grid max-w-[1240px] items-center gap-14 lg:grid-cols-[.86fr_1.14fr]">
             <div><div className="reveal inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[.15em] text-[#c9f26a]"><Sparkles className="h-3.5 w-3.5" /> Live business cockpit</div><h2 className="reveal mt-5 font-display text-[clamp(2.8rem,5vw,5.3rem)] font-black leading-[.92] tracking-[-.07em]">Know what’s happening. <span className="text-[#c9f26a]">Right now.</span></h2><p className="reveal mt-6 max-w-lg text-base leading-7 text-white/60">Sales, stock and customer activity become one calm, clear view—on your phone, tablet or desktop.</p>
               <div className="mt-9 grid gap-3 sm:grid-cols-2">{([['Live revenue', BarChart3], ['Smart stock alerts', PackageCheck], ['Cloud backup', Cloud], ['Role-based access', ShieldCheck]] as const).map(([label, Icon]) => <div key={label} className="reveal flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.06] p-4 text-sm font-bold"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#3568f5]"><Icon className="h-4 w-4" /></span>{label}</div>)}</div>
             </div>
-            <div className="reveal relative"><div className="absolute -inset-5 rounded-[46px] bg-gradient-to-br from-[#3568f5]/35 via-[#c9b6ff]/15 to-[#c9f26a]/25 blur-2xl" /><div className="relative overflow-hidden rounded-[34px] border border-white/15 bg-white/5 p-2 shadow-2xl"><img src="/images/clay-commerce.webp" alt="Colorful retail tools including barcode scanner, receipt and analytics" className="aspect-[3/2] w-full rounded-[28px] object-cover" loading="lazy" /><div className="absolute bottom-6 left-6 right-6 flex items-center justify-between rounded-2xl border border-white/60 bg-white/90 p-4 text-[#141b34] shadow-xl backdrop-blur-xl"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#74798a]">Today’s sales</p><p className="mt-1 font-display text-2xl font-black tracking-tight">₹48,240</p></div><div className="rounded-xl bg-[#c9f26a] px-3 py-2 text-xs font-extrabold">↗ 18.4%</div></div></div></div>
+            <div className="reveal relative min-h-[500px]"><div className="absolute -inset-5 rounded-[46px] bg-gradient-to-br from-[#3568f5]/35 via-[#c9b6ff]/15 to-[#c9f26a]/25 blur-2xl" /><div className="absolute inset-0 overflow-hidden rounded-[34px] border border-white/15 bg-gradient-to-br from-white/[.09] to-white/[.02] shadow-2xl"><div className="absolute inset-8 rounded-full bg-[#3568f5]/25 blur-3xl" /><motion.img src="/images/clay-analytics-icons.png" alt="Floating clay analytics, customer, barcode and cloud icons" className="absolute inset-x-[-7%] top-[-2%] h-[88%] w-[114%] object-contain drop-shadow-[0_28px_42px_rgba(0,0,0,.35)]" animate={reduceMotion ? undefined : { y: [0, -12, 0], rotate: [0, 1, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }} /><div className="absolute bottom-6 left-6 right-6 flex items-center justify-between rounded-2xl border border-white/60 bg-white/90 p-4 text-[#141b34] shadow-xl backdrop-blur-xl"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#74798a]">Today’s sales</p><p className="mt-1 font-display text-2xl font-black tracking-tight">₹48,240</p></div><div className="rounded-xl bg-[#c9f26a] px-3 py-2 text-xs font-extrabold">↗ 18.4%</div></div></div></div>
           </div>
         </section>
 
