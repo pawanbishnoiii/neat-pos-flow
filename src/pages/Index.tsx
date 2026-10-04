@@ -1,484 +1,174 @@
-import { motion, useInView } from 'framer-motion';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import Lenis from 'lenis';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
-  Car, Wrench, Zap, BarChart3, ScanLine, Printer, ChevronRight, Star, Shield,
-  ShoppingCart, Pill, Laptop, Shirt, Apple, Coffee, Scissors, BookOpen,
-  Hammer, Heart, Search, Users, Receipt, Globe, ArrowRight, Check, Sparkles,
-  Store, Phone, Mail, MapPin, MessageSquare, Smartphone, Clock, Lock,
-  Layers, TrendingUp, Eye, Play, ChevronDown, Award, Wifi, Database
+  ArrowRight, BadgeCheck, BarChart3, Boxes, ChevronDown, CircleCheck, Cloud,
+  CreditCard, Globe2, Heart, IndianRupee, Layers3, MessageCircle, PackageCheck,
+  Play, Quote, ReceiptText, ScanBarcode, ShieldCheck, ShoppingBag, Sparkles,
+  Star, UsersRound, WandSparkles,
 } from 'lucide-react';
+import BrandMark from '@/components/marketing/BrandMark';
+import { useAuth } from '@/hooks/useAuth';
 
-const storeCategories = [
-  { icon: Car, name: 'Car Wash', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  { icon: Wrench, name: 'Auto Parts', color: 'text-orange-500', bg: 'bg-orange-500/10' },
-  { icon: ShoppingCart, name: 'Grocery', color: 'text-green-500', bg: 'bg-green-500/10' },
-  { icon: Pill, name: 'Medical', color: 'text-red-500', bg: 'bg-red-500/10' },
-  { icon: Laptop, name: 'Electronics', color: 'text-purple-500', bg: 'bg-purple-500/10' },
-  { icon: Shirt, name: 'Fashion', color: 'text-pink-500', bg: 'bg-pink-500/10' },
-  { icon: Apple, name: 'Fruits & Veg', color: 'text-lime-500', bg: 'bg-lime-500/10' },
-  { icon: Coffee, name: 'Café', color: 'text-amber-600', bg: 'bg-amber-600/10' },
-  { icon: Scissors, name: 'Salon', color: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10' },
-  { icon: Hammer, name: 'Hardware', color: 'text-slate-500', bg: 'bg-slate-500/10' },
-  { icon: BookOpen, name: 'Stationery', color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-  { icon: Heart, name: 'Pet Store', color: 'text-rose-500', bg: 'bg-rose-500/10' },
-];
+gsap.registerPlugin(ScrollTrigger);
+
+const shopTypes = ['Grocery', 'Fashion', 'Café', 'Pharmacy', 'Salon', 'Electronics', 'Auto care'];
 
 const features = [
-  { icon: ScanLine, title: 'Barcode Scanner', desc: 'Scan product barcodes with camera to instantly add items to billing or inventory' },
-  { icon: Printer, title: 'Multi-Printer Support', desc: 'Connect Epson, Canon, HP, SUNMI, Samsung and more printers for instant receipt printing' },
-  { icon: BarChart3, title: 'Smart Reports', desc: 'Revenue analytics, daily/weekly/monthly trends, and inventory insights' },
-  { icon: Shield, title: 'Cloud Secured', desc: 'All your business data is encrypted and backed up in the cloud automatically' },
-  { icon: Users, title: 'Customer CRM', desc: 'Auto-save customer profiles, track visits, spending history and vehicle info' },
-  { icon: Globe, title: 'Online Store', desc: 'Get a unique public store link with 5 beautiful themes to share your catalog' },
-  { icon: Smartphone, title: 'Mobile Optimized', desc: 'Use billing, workspace and dashboard on phone with touch-optimized interface' },
-  { icon: MessageSquare, title: 'WhatsApp Sharing', desc: 'Share bills, store links and receipts directly via WhatsApp' },
-  { icon: Lock, title: 'Admin Controls', desc: 'Central admin dashboard to manage all businesses, users and platform features' },
+  { icon: ScanBarcode, title: 'Bill at the speed of thought', copy: 'Scan, search or tap. A checkout designed to keep queues moving and customers smiling.', className: 'md:col-span-2 bg-[#141b34] text-white', accent: 'bg-[#ff5d3b] text-white' },
+  { icon: Boxes, title: 'Inventory that thinks ahead', copy: 'Live stock, low-stock nudges and product insights without spreadsheet archaeology.', className: 'bg-[#c9f26a] text-[#141b34]', accent: 'bg-[#141b34] text-white' },
+  { icon: UsersRound, title: 'Customers, remembered', copy: 'Profiles, credit ledgers, purchase history and loyalty—beautifully connected.', className: 'bg-[#c9b6ff] text-[#141b34]', accent: 'bg-white/70 text-[#5a38c9]' },
+  { icon: Globe2, title: 'Your store, online in minutes', copy: 'Publish a polished catalog and share it anywhere. No coding, no design degree.', className: 'md:col-span-2 bg-[#fff4df] text-[#141b34]', accent: 'bg-[#3568f5] text-white' },
+];
+
+const steps = [
+  { id: '01', title: 'Tell us about your shop', copy: 'Choose a business type and Zen shapes itself around the way you work.', color: '#ff5d3b' },
+  { id: '02', title: 'Bring your products', copy: 'Add manually, scan a barcode or start from a ready-made product gallery.', color: '#3568f5' },
+  { id: '03', title: 'Make your first sale', copy: 'Bill, print and share—then watch your dashboard come alive in real time.', color: '#90c52d' },
 ];
 
 const testimonials = [
-  { name: 'Rajesh Kumar', biz: 'AutoSpa Car Wash', text: 'ZEN POS completely transformed our billing. Barcode scanning and thermal printing saves us 30 minutes daily!', avatar: '🚗' },
-  { name: 'Priya Sharma', biz: 'Krishna Grocery', text: 'Managing 500+ products was a nightmare. Now I scan, bill, and track everything from my phone.', avatar: '🛒' },
-  { name: 'Ahmed Khan', biz: 'TechZone Electronics', text: 'The customer management feature helps me remember every customer. My repeat business is up 40%!', avatar: '💻' },
-  { name: 'Dr. Meena', biz: 'LifeCare Pharmacy', text: 'Expiry tracking and batch management has been a game changer for our pharmacy. No more expired stock losses.', avatar: '💊' },
-  { name: 'Sunita Devi', biz: 'Style Studio Salon', text: 'Appointment booking and service tracking makes managing my salon so much easier. Clients love the online store!', avatar: '✂️' },
-  { name: 'Ravi Patel', biz: 'Fresh Farm Veggies', text: 'Weight-based billing is perfect for my vegetable shop. Daily price updates are so simple now.', avatar: '🥬' },
+  { quote: 'The first POS my team understood without training. Billing feels genuinely effortless now.', name: 'Priya Sharma', role: 'Krishna Grocery, Jaipur', initials: 'PS', color: '#ffd84d' },
+  { quote: 'I run the counter from my phone and still know exactly what is selling across the whole week.', name: 'Ahmed Khan', role: 'TechZone, Lucknow', initials: 'AK', color: '#c9b6ff' },
+  { quote: 'Our repeat customers are up because credit, history and WhatsApp bills finally live together.', name: 'Ritika Mehta', role: 'Sunday Studio, Surat', initials: 'RM', color: '#c9f26a' },
 ];
 
-const pricingFeatures = [
-  'Unlimited Products & Services', 'Barcode Scanner & Multi-Printer Support', 'Customer Management & CRM',
-  'Online Store with 5 Themes', 'Revenue Reports & Analytics', 'WhatsApp Bill Sharing',
-  'Multi-Category Dashboard', 'Cloud Backup & Security', 'Email Notifications', 'SMTP Integration',
-];
+const FloatPill = ({ className, children }: { className: string; children: ReactNode }) => (
+  <motion.div className={`absolute z-20 flex items-center gap-2 rounded-2xl border border-white/70 bg-white/90 px-3.5 py-2.5 text-xs font-bold text-[#141b34] shadow-[0_18px_50px_rgba(20,27,52,.14)] backdrop-blur-xl ${className}`} animate={{ y: [0, -9, 0] }} transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}>
+    {children}
+  </motion.div>
+);
 
-const howItWorks = [
-  { step: '01', title: 'Sign Up Free', desc: 'Create your account with email. No credit card needed.', icon: Users },
-  { step: '02', title: 'Choose Category', desc: 'Select your business type from 12+ categories for a customized experience.', icon: Layers },
-  { step: '03', title: 'Add Products', desc: 'Pick from pre-built gallery or add manually. Scan barcodes to add instantly.', icon: ScanLine },
-  { step: '04', title: 'Start Billing', desc: 'Create invoices, print receipts, share on WhatsApp. All from your phone.', icon: Receipt },
-];
-
-const platformStats = [
-  { val: '12+', label: 'Business Types', icon: Store },
-  { val: '60+', label: 'Pre-built Products', icon: Database },
-  { val: '9+', label: 'Printer Brands', icon: Printer },
-  { val: '5', label: 'Store Themes', icon: Eye },
-];
-
-const AnimatedSection = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
-  return (
-    <motion.div ref={ref} initial={{ opacity: 0, y: 40 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6, ease: 'easeOut' }} className={className}>
-      {children}
-    </motion.div>
-  );
-};
+const SectionTitle = ({ eyebrow, title, copy, align = 'center' }: { eyebrow: string; title: ReactNode; copy?: string; align?: 'center' | 'left' }) => (
+  <div className={`reveal ${align === 'center' ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl text-left'}`}>
+    <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#141b34]/10 bg-white px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.15em] text-[#ff5d3b] shadow-sm"><Sparkles className="h-3.5 w-3.5" /> {eyebrow}</div>
+    <h2 className="font-display text-[clamp(2.25rem,5vw,4.8rem)] font-extrabold leading-[.96] tracking-[-.065em] text-[#141b34]">{title}</h2>
+    {copy && <p className={`mt-5 text-base leading-7 text-[#5f6577] md:text-lg ${align === 'center' ? 'mx-auto max-w-2xl' : 'max-w-xl'}`}>{copy}</p>}
+  </div>
+);
 
 const Index = () => {
+  const rootRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  if (!loading && user) { navigate('/', { replace: true }); }
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (!loading && user) navigate('/', { replace: true });
+  }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const lenis = new Lenis({ duration: 1.05, smoothWheel: true, wheelMultiplier: 0.9 });
+    let frame = 0;
+    const raf = (time: number) => { lenis.raf(time); frame = requestAnimationFrame(raf); };
+    frame = requestAnimationFrame(raf);
+    lenis.on('scroll', ScrollTrigger.update);
+    return () => { cancelAnimationFrame(frame); lenis.destroy(); };
+  }, [reduceMotion]);
+
+  useLayoutEffect(() => {
+    if (reduceMotion || !rootRef.current) return;
+    const context = gsap.context(() => {
+      gsap.from('.hero-rise', { y: 44, opacity: 0, duration: 1, stagger: 0.09, ease: 'power4.out' });
+      gsap.from('.hero-art', { scale: 0.9, rotate: 3, opacity: 0, duration: 1.3, delay: 0.15, ease: 'power4.out' });
+      gsap.utils.toArray<HTMLElement>('.reveal').forEach((element) => gsap.from(element, { y: 45, opacity: 0, duration: 0.85, ease: 'power3.out', scrollTrigger: { trigger: element, start: 'top 84%', once: true } }));
+      gsap.to('.hero-art', { yPercent: 9, ease: 'none', scrollTrigger: { trigger: '.hero-shell', start: 'top top', end: 'bottom top', scrub: 1 } });
+      gsap.to('.story-image', { scale: 1.08, ease: 'none', scrollTrigger: { trigger: '.story-wrap', start: 'top bottom', end: 'bottom top', scrub: 1 } });
+    }, rootRef);
+    return () => context.revert();
+  }, [reduceMotion]);
+
+  const goToAuth = () => navigate('/auth');
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden relative">
-      {/* Animated Grid Background */}
-      <div className="pointer-events-none fixed inset-0 opacity-15" style={{
-        backgroundImage: 'linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px)',
-        backgroundSize: '40px 40px', maskImage: 'radial-gradient(circle at center, black 20%, transparent 75%)',
-      }} />
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-96" style={{ background: 'linear-gradient(180deg, hsl(var(--primary) / 0.12), transparent)' }} />
-      
-      {/* Floating orbs */}
-      <motion.div animate={{ y: [0, -20, 0], x: [0, 10, 0] }} transition={{ duration: 8, repeat: Infinity }} className="pointer-events-none fixed top-32 left-[10%] w-64 h-64 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, hsl(var(--primary)), transparent)' }} />
-      <motion.div animate={{ y: [0, 20, 0], x: [0, -15, 0] }} transition={{ duration: 10, repeat: Infinity }} className="pointer-events-none fixed top-64 right-[15%] w-48 h-48 rounded-full opacity-8" style={{ background: 'radial-gradient(circle, hsl(var(--accent)), transparent)' }} />
-
-      {/* Sticky Navbar */}
-      <nav className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border/50">
-        <div className="flex items-center justify-between px-4 md:px-8 py-3 max-w-6xl mx-auto">
-          <div className="flex items-center gap-2">
-            <motion.div whileHover={{ rotate: 15 }} className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary-foreground" />
-            </motion.div>
-            <span className="text-lg font-bold font-display text-foreground">ZEN <span className="gradient-primary-text">POS</span></span>
-          </div>
-          <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#categories" className="hover:text-foreground transition-colors">Categories</a>
-            <a href="#how-it-works" className="hover:text-foreground transition-colors">How it Works</a>
-            <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-            <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
+    <div ref={rootRef} className="zen-landing min-h-screen overflow-hidden bg-[#fbf8f2] text-[#141b34] selection:bg-[#ff5d3b] selection:text-white">
+      <nav className="fixed inset-x-0 top-0 z-50 px-3 pt-3 md:px-6 md:pt-5">
+        <div className="mx-auto flex max-w-[1240px] items-center justify-between rounded-[22px] border border-white/80 bg-[#fbf8f2]/85 px-4 py-3 shadow-[0_12px_45px_rgba(20,27,52,.07)] backdrop-blur-2xl md:px-6">
+          <button onClick={() => scrollTo('top')} aria-label="Go to top"><BrandMark /></button>
+          <div className="hidden items-center gap-7 text-sm font-semibold text-[#5f6577] md:flex">
+            <button onClick={() => scrollTo('features')} className="transition-colors hover:text-[#141b34]">Features</button>
+            <button onClick={() => scrollTo('how')} className="transition-colors hover:text-[#141b34]">How it works</button>
+            <button onClick={() => scrollTo('stories')} className="transition-colors hover:text-[#141b34]">Stories</button>
+            <button onClick={() => scrollTo('pricing')} className="transition-colors hover:text-[#141b34]">Pricing</button>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/auth')} className="px-4 py-2 rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors">Login</button>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/auth')}
-              className="px-5 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-bold glow-primary">
-              Get Started
-            </motion.button>
+            <button onClick={goToAuth} className="hidden rounded-xl px-4 py-2.5 text-sm font-bold transition-colors hover:bg-[#141b34]/5 sm:block">Log in</button>
+            <button onClick={goToAuth} className="group flex items-center gap-2 rounded-[14px] bg-[#141b34] px-4 py-2.5 text-sm font-bold text-white shadow-[0_9px_20px_rgba(20,27,52,.18)] transition-transform hover:-translate-y-0.5">Start free <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></button>
           </div>
         </div>
       </nav>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-8">
-        {/* Hero Section - Enhanced */}
-        <section className="pt-16 pb-20 md:pt-24 md:pb-32 text-center space-y-8">
-          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <motion.span initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6 border border-primary/20">
-              <Sparkles className="w-3.5 h-3.5" /> Free for All Businesses — No Credit Card
-            </motion.span>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-display text-foreground leading-tight">
-              The Smartest <span className="gradient-primary-text">POS System</span> <br className="hidden md:block" />
-              for Every Indian Business
-            </h1>
-            <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto mt-5 leading-relaxed">
-              Billing, inventory, customer management, online store, email alerts and analytics — all in one beautiful app.
-              Built for car washes, grocery, medical, electronics, fashion, cafés, salons and 6+ more categories.
-            </p>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }} onClick={() => navigate('/auth')}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl gradient-primary text-primary-foreground font-bold text-sm glow-primary flex items-center justify-center gap-2 shadow-xl">
-              Start Free Now <ChevronRight className="w-4 h-4" />
-            </motion.button>
-            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
-              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-secondary text-secondary-foreground font-semibold text-sm flex items-center justify-center gap-2">
-              <Play className="w-4 h-4" /> Explore Features
-            </motion.button>
-          </motion.div>
-
-          {/* Platform Stats */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-            className="flex items-center justify-center gap-6 md:gap-10 pt-8">
-            {platformStats.map((s, i) => {
-              const Icon = s.icon;
-              return (
-                <motion.div key={s.label} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 + i * 0.1 }}
-                  className="text-center">
-                  <div className="w-12 h-12 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <p className="text-2xl md:text-3xl font-bold font-display gradient-primary-text">{s.val}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-
-          {/* Scroll indicator */}
-          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 1.5, repeat: Infinity }} className="pt-4">
-            <ChevronDown className="w-5 h-5 mx-auto text-muted-foreground/50" />
-          </motion.div>
+      <main>
+        <section id="top" className="hero-shell relative min-h-[920px] overflow-hidden px-4 pb-20 pt-32 md:px-8 md:pt-40 lg:min-h-[850px]">
+          <div className="absolute left-[-8rem] top-24 h-80 w-80 rounded-full bg-[#c9b6ff]/35 blur-3xl" />
+          <div className="absolute right-[-8rem] top-20 h-96 w-96 rounded-full bg-[#ffd84d]/30 blur-3xl" />
+          <div className="relative mx-auto grid max-w-[1240px] items-center gap-12 lg:grid-cols-[.9fr_1.1fr] lg:gap-4">
+            <div className="relative z-20 text-center lg:text-left">
+              <div className="hero-rise mb-6 inline-flex items-center gap-2 rounded-full border border-[#141b34]/10 bg-white px-3 py-2 text-xs font-extrabold shadow-sm"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#c9f26a]"><WandSparkles className="h-3.5 w-3.5" /></span>India’s delightfully simple POS</div>
+              <h1 className="hero-rise font-display text-[clamp(3.6rem,7.3vw,7.5rem)] font-black leading-[.82] tracking-[-.085em]">Sell more.<br /><span className="relative inline-block text-[#ff5d3b]">Stress less.<svg className="absolute -bottom-4 left-2 w-[95%]" viewBox="0 0 430 22" fill="none" aria-hidden="true"><path d="M4 15C120 2 288 2 426 9" stroke="#3568F5" strokeWidth="9" strokeLinecap="round" /></svg></span></h1>
+              <p className="hero-rise mx-auto mt-9 max-w-xl text-base leading-7 text-[#5f6577] md:text-lg lg:mx-0">Billing, inventory, customers and your online store—together in one joyful workspace built for ambitious Indian businesses.</p>
+              <div className="hero-rise mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <button onClick={goToAuth} className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ff5d3b] px-6 py-4 text-sm font-extrabold text-white shadow-[0_14px_30px_rgba(255,93,59,.28)] transition-all hover:-translate-y-1 sm:w-auto">Build my free store <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button>
+                <button onClick={() => scrollTo('product')} className="group flex w-full items-center justify-center gap-2 rounded-2xl border border-[#141b34]/10 bg-white px-6 py-4 text-sm font-extrabold shadow-sm transition-all hover:-translate-y-1 sm:w-auto"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#ffd84d]"><Play className="ml-0.5 h-3.5 w-3.5 fill-current" /></span> See it in action</button>
+              </div>
+              <div className="hero-rise mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold text-[#74798a] lg:justify-start"><span className="flex items-center gap-1.5"><CircleCheck className="h-4 w-4 text-[#63a515]" /> No credit card</span><span className="flex items-center gap-1.5"><CircleCheck className="h-4 w-4 text-[#63a515]" /> Set up in 3 minutes</span></div>
+            </div>
+            <div className="hero-art relative mx-auto w-full max-w-[760px] pt-3 lg:translate-x-8">
+              <div className="absolute inset-6 rounded-[46%] bg-gradient-to-br from-[#c9b6ff]/50 via-[#ffd84d]/25 to-[#c9f26a]/40 blur-2xl" />
+              <div className="relative overflow-hidden rounded-[32px] border-[7px] border-white bg-white shadow-[0_35px_100px_rgba(20,27,52,.16)] md:rounded-[44px]"><img src="/images/zen-pos-hero.webp" alt="Colorful Zen POS dashboard, payment terminal and receipt printer" className="aspect-[16/10] h-full w-full object-cover" fetchPriority="high" /></div>
+              <FloatPill className="-left-2 top-[20%] md:-left-8"><span className="grid h-8 w-8 place-items-center rounded-xl bg-[#c9f26a]"><IndianRupee className="h-4 w-4" /></span> +28% this week</FloatPill>
+              <FloatPill className="-bottom-5 right-4 md:right-12"><span className="grid h-8 w-8 place-items-center rounded-xl bg-[#c9b6ff]"><BadgeCheck className="h-4 w-4" /></span> Stock synced</FloatPill>
+              <div className="absolute -right-3 -top-5 grid h-20 w-20 rotate-12 place-items-center rounded-[26px] bg-[#3568f5] text-white shadow-xl md:-right-8 md:h-24 md:w-24"><ReceiptText className="h-9 w-9" /></div>
+            </div>
+          </div>
+          <button onClick={() => scrollTo('proof')} className="absolute bottom-8 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-[#74798a] lg:flex">Scroll to discover <ChevronDown className="h-4 w-4 animate-bounce" /></button>
         </section>
 
-        {/* Store Categories */}
-        <AnimatedSection>
-          <section id="categories" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">12+ Categories</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Works for Every Store</h2>
-              <p className="text-sm text-muted-foreground max-w-lg mx-auto">No matter what you sell — products or services — ZEN POS adapts to your business type with custom dashboards and workflows</p>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {storeCategories.map((cat, i) => {
-                const Icon = cat.icon;
-                return (
-                  <motion.div key={cat.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                    transition={{ delay: i * 0.04 }} whileHover={{ scale: 1.05, y: -5 }}
-                    className="rounded-2xl glass-card shadow-soft p-4 text-center space-y-2 hover:shadow-elevated transition-all cursor-pointer group"
-                    onClick={() => navigate('/auth')}>
-                    <motion.div whileHover={{ rotate: 10 }} className={`w-12 h-12 mx-auto rounded-xl ${cat.bg} flex items-center justify-center`}>
-                      <Icon className={`w-6 h-6 ${cat.color}`} />
-                    </motion.div>
-                    <p className="text-xs font-semibold text-foreground">{cat.name}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-            <p className="text-center text-xs text-muted-foreground">+ Custom Business type for any category not listed</p>
-          </section>
-        </AnimatedSection>
+        <section id="proof" className="border-y border-[#141b34]/8 bg-white py-7">
+          <div className="mx-auto flex max-w-[1240px] flex-col items-center justify-between gap-6 px-5 lg:flex-row">
+            <div className="flex items-center gap-4"><div className="flex -space-x-2">{['RK', 'PM', 'AS', 'NK'].map((name, index) => <span key={name} className="grid h-9 w-9 place-items-center rounded-full border-2 border-white text-[10px] font-extrabold" style={{ background: ['#ffd84d', '#c9b6ff', '#c9f26a', '#ff927a'][index] }}>{name}</span>)}</div><div><div className="flex text-[#ffb400]">{Array.from({ length: 5 }).map((_, index) => <Star key={index} className="h-3.5 w-3.5 fill-current" />)}</div><p className="mt-1 text-xs font-bold text-[#5f6577]">Loved by modern shop owners</p></div></div>
+            <div className="flex flex-wrap items-center justify-center gap-3">{shopTypes.map((type) => <span key={type} className="rounded-full bg-[#f5f1ea] px-3.5 py-2 text-xs font-bold text-[#5f6577]">{type}</span>)}</div>
+          </div>
+        </section>
 
-        {/* Features - 3x3 Grid */}
-        <AnimatedSection>
-          <section id="features" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Powerful Tools</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Everything You Need</h2>
-              <p className="text-sm text-muted-foreground max-w-lg mx-auto">From barcode scanning to SMTP email alerts, every feature is built to save you time and grow your business</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {features.map((f, i) => {
-                const Icon = f.icon;
-                return (
-                  <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                    transition={{ delay: i * 0.05 }} whileHover={{ y: -4 }}
-                    className="rounded-2xl glass-card shadow-soft p-5 space-y-3 hover:shadow-elevated transition-all group">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <h3 className="text-sm font-bold text-foreground">{f.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* How it Works */}
-        <AnimatedSection>
-          <section id="how-it-works" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Simple Setup</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Get Started in 3 Minutes</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {howItWorks.map((s, i) => {
-                const Icon = s.icon;
-                return (
-                  <motion.div key={s.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }} className="rounded-2xl glass-card shadow-soft p-6 space-y-3 text-center relative overflow-hidden">
-                    <div className="absolute -top-4 -right-4 text-8xl font-bold font-display text-primary/5">{s.step}</div>
-                    <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
-                      <Icon className="w-7 h-7 text-primary" />
-                    </div>
-                    <span className="text-xl font-bold font-display gradient-primary-text">{s.step}</span>
-                    <h3 className="text-sm font-bold text-foreground">{s.title}</h3>
-                    <p className="text-xs text-muted-foreground">{s.desc}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Dashboard Preview Mockup */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20">
-            <div className="rounded-3xl overflow-hidden border border-border/50 shadow-elevated bg-card">
-              <div className="h-8 bg-secondary flex items-center gap-1.5 px-4">
-                <div className="w-3 h-3 rounded-full bg-destructive/50" /><div className="w-3 h-3 rounded-full bg-warning/50" /><div className="w-3 h-3 rounded-full bg-success/50" />
-                <span className="ml-4 text-[10px] text-muted-foreground font-medium">zenpos.app/dashboard</span>
-              </div>
-              <div className="p-6 md:p-8 space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Today Sales', value: '₹12,450', color: 'gradient-primary text-primary-foreground' },
-                    { label: 'Monthly Revenue', value: '₹3.2L', color: 'bg-success/10 text-success' },
-                    { label: 'Products', value: '284', color: 'bg-primary/10 text-primary' },
-                    { label: 'Customers', value: '1,247', color: 'bg-accent/10 text-accent' },
-                  ].map(s => (
-                    <div key={s.label} className={`rounded-xl p-4 ${s.color.includes('gradient') ? s.color : ''}`}>
-                      <div className={`${s.color.includes('gradient') ? '' : s.color} rounded-xl ${s.color.includes('gradient') ? '' : 'p-4'}`}>
-                        <p className={`text-xs ${s.color.includes('gradient') ? 'text-primary-foreground/70' : 'opacity-70'}`}>{s.label}</p>
-                        <p className={`text-xl font-bold font-display ${s.color.includes('gradient') ? '' : ''}`}>{s.value}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="h-32 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 flex items-center justify-center">
-                  <TrendingUp className="w-8 h-8 text-primary/20" />
-                </div>
-              </div>
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Testimonials */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Happy Owners</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Loved by Business Owners</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {testimonials.map((t, i) => (
-                <motion.div key={t.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                  transition={{ delay: i * 0.08 }} whileHover={{ y: -3 }}
-                  className="rounded-2xl glass-card shadow-soft p-5 space-y-3 hover:shadow-elevated transition-all">
-                  <div className="flex gap-1">{[...Array(5)].map((_, j) => <Star key={j} className="w-3.5 h-3.5 text-warning fill-warning" />)}</div>
-                  <p className="text-sm text-foreground italic leading-relaxed">"{t.text}"</p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{t.avatar}</span>
-                    <div><p className="text-xs font-bold text-foreground">{t.name}</p><p className="text-[10px] text-muted-foreground">{t.biz}</p></div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Pricing */}
-        <AnimatedSection>
-          <section id="pricing" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Simple Pricing</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Free Forever</h2>
-              <p className="text-sm text-muted-foreground">No hidden charges. No premium plans. Everything included.</p>
-            </div>
-            <div className="max-w-md mx-auto">
-              <motion.div whileHover={{ y: -4 }}
-                className="rounded-3xl glass-card shadow-elevated p-8 space-y-5 border-2 border-primary/20 relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-1 gradient-primary" />
-                <div className="text-center space-y-1">
-                  <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success/10 text-success text-xs font-bold mb-2">
-                    <Award className="w-3 h-3" /> Best Value
-                  </div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-primary">Free Plan</p>
-                  <p className="text-5xl font-bold font-display text-foreground">₹0<span className="text-base font-normal text-muted-foreground">/month</span></p>
-                </div>
-                <div className="space-y-2.5">
-                  {pricingFeatures.map(f => (
-                    <div key={f} className="flex items-center gap-2.5">
-                      <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center shrink-0"><Check className="w-3 h-3 text-success" /></div>
-                      <span className="text-sm text-foreground">{f}</span>
-                    </div>
-                  ))}
-                </div>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={() => navigate('/auth')}
-                  className="w-full py-3.5 rounded-xl gradient-primary text-primary-foreground font-bold text-sm glow-primary">
-                  Get Started Free
-                </motion.button>
-              </motion.div>
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Find Store */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20 space-y-6">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Discover</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Find a Store</h2>
-              <p className="text-sm text-muted-foreground">Search for businesses using ZEN POS</p>
-            </div>
-            <div className="max-w-md mx-auto">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input type="text" placeholder="Enter store name or slug..."
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-soft"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const val = (e.target as HTMLInputElement).value.trim();
-                      if (val) navigate(`/store/${val}`);
-                    }
-                  }} />
-              </div>
-              <p className="text-xs text-muted-foreground text-center mt-2">Try entering a store slug like "autospa" or "krishna-grocery"</p>
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* FAQ */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">FAQ</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Frequently Asked Questions</h2>
-            </div>
-            <div className="max-w-2xl mx-auto space-y-3">
-              {[
-                { q: 'Is ZEN POS really free?', a: 'Yes! ZEN POS is completely free with no hidden charges. All features including barcode scanning, multi-printer support, online store and analytics are included.' },
-                { q: 'Can I use it on my phone?', a: 'Absolutely! ZEN POS is built mobile-first. The billing, workspace and dashboard are all optimized for phone and tablet use.' },
-                { q: 'Which printers are supported?', a: 'We support Epson, Canon, HP, Samsung, SUNMI, Star Micronics, Citizen and generic thermal printers via Bluetooth, USB and WiFi.' },
-                { q: 'Can I have an online store page?', a: 'Yes! Every business gets a unique public store URL with 5 beautiful themes. Customers can view products and leave reviews.' },
-                { q: 'Is my data secure?', a: 'All data is encrypted and stored in the cloud with automatic backups. Row-level security ensures only you can access your business data.' },
-              ].map((faq, i) => (
-                <motion.div key={i} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }}
-                  className="rounded-2xl glass-card shadow-soft p-5 space-y-2">
-                  <h3 className="text-sm font-bold text-foreground">{faq.q}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{faq.a}</p>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Contact */}
-        <AnimatedSection>
-          <section id="contact" className="py-16 md:py-20 space-y-8">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Get in Touch</span>
-              <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground">Contact Us</h2>
-              <p className="text-sm text-muted-foreground">Have questions? We're here to help.</p>
-            </div>
-            <div className="max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { icon: Phone, label: 'Call Us', value: '+91 98765 43210' },
-                { icon: Mail, label: 'Email', value: 'hello@zenpos.in' },
-                { icon: MapPin, label: 'Location', value: 'India' },
-              ].map(c => {
-                const Icon = c.icon;
-                return (
-                  <motion.div key={c.label} whileHover={{ y: -3 }} className="rounded-2xl glass-card shadow-soft p-5 text-center space-y-2">
-                    <div className="w-12 h-12 mx-auto rounded-xl bg-primary/10 flex items-center justify-center"><Icon className="w-5 h-5 text-primary" /></div>
-                    <p className="text-xs font-bold text-foreground">{c.label}</p>
-                    <p className="text-xs text-muted-foreground">{c.value}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* CTA Banner */}
-        <AnimatedSection>
-          <section className="py-16 md:py-20">
-            <motion.div whileHover={{ scale: 1.01 }}
-              className="rounded-3xl gradient-primary p-8 md:p-14 text-center space-y-5 glow-primary relative overflow-hidden">
-              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-              <div className="relative">
-                <h2 className="text-3xl md:text-4xl font-bold font-display text-primary-foreground">Ready to Simplify Your Business?</h2>
-                <p className="text-primary-foreground/80 text-sm max-w-md mx-auto mt-3">Join thousands of business owners who use ZEN POS to save time, increase revenue, and delight customers.</p>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => navigate('/auth')}
-                  className="mt-6 px-10 py-4 rounded-2xl bg-primary-foreground text-primary font-bold text-sm shadow-xl">
-                  Start Free Today — No Credit Card
-                </motion.button>
-              </div>
-            </motion.div>
-          </section>
-        </AnimatedSection>
-
-        {/* Footer */}
-        <footer className="py-10 border-t border-border">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center"><Zap className="w-4 h-4 text-primary-foreground" /></div>
-                <span className="text-sm font-bold font-display text-foreground">ZEN POS</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">The smartest POS system for every Indian business. Free forever.</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">Product</p>
-              <div className="space-y-1.5">{['Features', 'Categories', 'Pricing', 'Online Store'].map(l => <a key={l} href={`#${l.toLowerCase().replace(' ', '-')}`} className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{l}</a>)}</div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">Support</p>
-              <div className="space-y-1.5">{['Contact Us', 'FAQ', 'Help Center', 'Privacy Policy'].map(l => <a key={l} href="#contact" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{l}</a>)}</div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">Connect</p>
-              <div className="space-y-1.5">
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Phone className="w-3 h-3" /> +91 98765 43210</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="w-3 h-3" /> hello@zenpos.in</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3" /> Made in India 🇮🇳</p>
-              </div>
+        <section id="features" className="px-4 py-24 md:px-8 md:py-32">
+          <div className="mx-auto max-w-[1240px]">
+            <SectionTitle eyebrow="One home for your business" title={<>Serious tools.<br /><span className="text-[#3568f5]">Zero boring bits.</span></>} copy="Every essential is thoughtfully connected, so your day feels lighter and your decisions get sharper." />
+            <div className="mt-14 grid gap-4 md:grid-cols-3">
+              {features.map((feature, index) => { const Icon = feature.icon; return <motion.article key={feature.title} whileHover={reduceMotion ? undefined : { y: -7, rotate: index % 2 ? -0.5 : 0.5 }} className={`reveal relative min-h-[300px] overflow-hidden rounded-[32px] p-7 md:p-9 ${feature.className}`}><div className={`mb-12 grid h-14 w-14 place-items-center rounded-[20px] shadow-sm ${feature.accent}`}><Icon className="h-6 w-6" /></div><h3 className="max-w-md font-display text-3xl font-extrabold leading-[1] tracking-[-.05em]">{feature.title}</h3><p className={`mt-4 max-w-lg text-sm leading-6 ${index === 0 ? 'text-white/65' : 'text-[#141b34]/65'}`}>{feature.copy}</p>{index === 0 && <div className="absolute -bottom-12 -right-8 h-44 w-44 rounded-full border-[28px] border-[#3568f5] opacity-80" />}{index === 2 && <Heart className="absolute right-7 top-7 h-20 w-20 fill-white/20 text-white/20" />}{index === 3 && <div className="absolute bottom-7 right-7 flex items-end gap-2">{[36, 58, 84].map((height, item) => <span key={height} className="w-5 rounded-t-lg bg-[#ff5d3b]" style={{ height, opacity: .55 + item * .18 }} />)}</div>}</motion.article>; })}
             </div>
           </div>
-          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">© 2026 ZEN POS. All rights reserved.</p>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>Terms</span><span>Privacy</span><span>Cookies</span>
+        </section>
+
+        <section id="product" className="bg-[#141b34] px-4 py-24 text-white md:px-8 md:py-32">
+          <div className="mx-auto grid max-w-[1240px] items-center gap-14 lg:grid-cols-[.86fr_1.14fr]">
+            <div><div className="reveal inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[.15em] text-[#c9f26a]"><Sparkles className="h-3.5 w-3.5" /> Live business cockpit</div><h2 className="reveal mt-5 font-display text-[clamp(2.8rem,5vw,5.3rem)] font-black leading-[.92] tracking-[-.07em]">Know what’s happening. <span className="text-[#c9f26a]">Right now.</span></h2><p className="reveal mt-6 max-w-lg text-base leading-7 text-white/60">Sales, stock and customer activity become one calm, clear view—on your phone, tablet or desktop.</p>
+              <div className="mt-9 grid gap-3 sm:grid-cols-2">{([['Live revenue', BarChart3], ['Smart stock alerts', PackageCheck], ['Cloud backup', Cloud], ['Role-based access', ShieldCheck]] as const).map(([label, Icon]) => <div key={label} className="reveal flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.06] p-4 text-sm font-bold"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#3568f5]"><Icon className="h-4 w-4" /></span>{label}</div>)}</div>
             </div>
+            <div className="reveal relative"><div className="absolute -inset-5 rounded-[46px] bg-gradient-to-br from-[#3568f5]/35 via-[#c9b6ff]/15 to-[#c9f26a]/25 blur-2xl" /><div className="relative overflow-hidden rounded-[34px] border border-white/15 bg-white/5 p-2 shadow-2xl"><img src="/images/clay-commerce.webp" alt="Colorful retail tools including barcode scanner, receipt and analytics" className="aspect-[3/2] w-full rounded-[28px] object-cover" loading="lazy" /><div className="absolute bottom-6 left-6 right-6 flex items-center justify-between rounded-2xl border border-white/60 bg-white/90 p-4 text-[#141b34] shadow-xl backdrop-blur-xl"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#74798a]">Today’s sales</p><p className="mt-1 font-display text-2xl font-black tracking-tight">₹48,240</p></div><div className="rounded-xl bg-[#c9f26a] px-3 py-2 text-xs font-extrabold">↗ 18.4%</div></div></div></div>
           </div>
-        </footer>
-      </div>
+        </section>
+
+        <section id="stories" className="story-wrap px-4 py-24 md:px-8 md:py-32">
+          <div className="mx-auto grid max-w-[1240px] items-center gap-14 lg:grid-cols-2">
+            <div className="reveal relative min-h-[560px] overflow-hidden rounded-[40px] bg-[#ffd84d]"><img src="/images/retail-founder.webp" alt="Indian shop owner smiling while using a point of sale tablet" className="story-image absolute inset-0 h-full w-full object-cover" loading="lazy" /><div className="absolute inset-x-5 bottom-5 rounded-[25px] border border-white/50 bg-[#141b34]/88 p-5 text-white backdrop-blur-xl md:inset-x-8 md:bottom-8 md:p-6"><Quote className="h-7 w-7 fill-[#ffd84d] text-[#ffd84d]" /><p className="mt-3 font-display text-xl font-bold leading-tight md:text-2xl">“Now I close the shop on time—and still know every number.”</p><p className="mt-3 text-xs font-semibold text-white/60">Aarohi · The Good Basket, Bengaluru</p></div></div>
+            <div><SectionTitle align="left" eyebrow="Built for real shop days" title={<>Less admin.<br /><span className="text-[#ff5d3b]">More ambition.</span></>} copy="Zen takes care of the repetitive work, so you can focus on the people, products and ideas that make your store yours." /><div className="mt-9 space-y-3">{([['One tap to share every bill', MessageCircle, '#c9f26a'], ['Works beautifully on mobile', CreditCard, '#c9b6ff'], ['Your own online storefront', ShoppingBag, '#ffd84d']] as const).map(([label, Icon, color]) => <div key={label} className="reveal flex items-center gap-4 rounded-2xl border border-[#141b34]/8 bg-white p-4 shadow-sm"><span className="grid h-11 w-11 place-items-center rounded-[15px]" style={{ background: color }}><Icon className="h-5 w-5" /></span><span className="font-display text-base font-extrabold">{label}</span></div>)}</div></div>
+          </div>
+        </section>
+
+        <section id="how" className="bg-[#efe9ff] px-4 py-24 md:px-8 md:py-32"><div className="mx-auto max-w-[1240px]"><SectionTitle eyebrow="Up and selling, quickly" title={<>Three little steps.<br /><span className="text-[#7050db]">One big upgrade.</span></>} /><div className="mt-14 grid gap-4 md:grid-cols-3">{steps.map((step) => <div key={step.id} className="reveal rounded-[30px] border border-white/80 bg-white/70 p-7 shadow-[0_20px_50px_rgba(75,49,135,.08)] backdrop-blur-lg md:p-8"><div className="font-display text-6xl font-black tracking-[-.08em]" style={{ color: step.color }}>{step.id}</div><h3 className="mt-10 font-display text-2xl font-extrabold leading-tight tracking-[-.04em]">{step.title}</h3><p className="mt-3 text-sm leading-6 text-[#5f6577]">{step.copy}</p></div>)}</div></div></section>
+
+        <section className="px-4 py-24 md:px-8 md:py-32"><div className="mx-auto max-w-[1240px]"><SectionTitle eyebrow="Shop-owner approved" title={<>Big love from<br /><span className="text-[#ff5d3b]">small businesses.</span></>} /><div className="mt-14 grid gap-4 lg:grid-cols-3">{testimonials.map((item, index) => <motion.article key={item.name} whileHover={reduceMotion ? undefined : { y: -8 }} className={`reveal rounded-[30px] p-7 md:p-8 ${index === 1 ? 'bg-[#141b34] text-white' : 'border border-[#141b34]/8 bg-white'}`}><div className="flex gap-1 text-[#ffb400]">{Array.from({ length: 5 }).map((_, star) => <Star key={star} className="h-4 w-4 fill-current" />)}</div><p className="mt-8 font-display text-2xl font-bold leading-[1.18] tracking-[-.035em]">“{item.quote}”</p><div className="mt-9 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-full text-xs font-black text-[#141b34]" style={{ background: item.color }}>{item.initials}</span><div><p className="text-sm font-extrabold">{item.name}</p><p className={`mt-0.5 text-xs ${index === 1 ? 'text-white/50' : 'text-[#74798a]'}`}>{item.role}</p></div></div></motion.article>)}</div></div></section>
+
+        <section id="pricing" className="px-4 pb-8 md:px-8 md:pb-12"><div className="reveal relative mx-auto max-w-[1240px] overflow-hidden rounded-[40px] bg-[#ff5d3b] px-6 py-16 text-center text-white md:px-16 md:py-24"><div className="absolute -left-16 -top-20 h-56 w-56 rounded-full border-[38px] border-[#ffd84d]/80" /><div className="absolute -bottom-24 -right-14 h-64 w-64 rounded-full bg-[#3568f5]" /><Layers3 className="absolute right-[13%] top-12 h-16 w-16 rotate-12 text-[#ffd84d] opacity-90" /><div className="relative z-10 mx-auto max-w-3xl"><p className="text-xs font-extrabold uppercase tracking-[.2em] text-white/70">₹0 to get started · no card needed</p><h2 className="mt-5 font-display text-[clamp(2.8rem,6vw,6rem)] font-black leading-[.88] tracking-[-.075em]">Your best business day starts here.</h2><p className="mx-auto mt-6 max-w-xl text-base leading-7 text-white/75">Join the new generation of Indian shop owners running smarter, calmer, more delightful businesses.</p><button onClick={goToAuth} className="group mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-extrabold text-[#141b34] shadow-xl transition-transform hover:-translate-y-1">Start selling free <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></button></div></div></section>
+      </main>
+
+      <footer className="px-5 py-10 md:px-8"><div className="mx-auto flex max-w-[1240px] flex-col items-center justify-between gap-6 border-t border-[#141b34]/10 pt-8 md:flex-row"><BrandMark /><p className="text-center text-xs leading-5 text-[#74798a]">Made with care for India’s boldest small businesses.<br />© 2026 Zen POS. All rights reserved.</p><div className="flex items-center gap-5 text-xs font-bold text-[#5f6577]"><button onClick={() => scrollTo('features')}>Product</button><button onClick={goToAuth}>Login</button><button onClick={() => scrollTo('pricing')}>Pricing</button></div></div></footer>
     </div>
   );
 };

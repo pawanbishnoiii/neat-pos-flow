@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -110,13 +110,43 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Manrope', sans-serif;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Bricolage Grotesque', sans-serif;
+  }
+}
+
+@layer components {
+  .zen-input {
+    @apply w-full rounded-2xl border border-[#141b34]/10 bg-[#f8f5ef] py-3.5 pl-11 pr-4 text-sm font-semibold text-[#141b34] outline-none transition-all placeholder:font-medium placeholder:text-[#a5a7b0] focus:border-[#ff5d3b]/60 focus:bg-white focus:ring-4 focus:ring-[#ff5d3b]/10;
+  }
+}
+
+.zen-landing,
+.zen-auth {
+  font-family: 'Manrope', sans-serif;
+}
+
+.zen-landing .font-display,
+.zen-auth .font-display {
+  font-family: 'Bricolage Grotesque', sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .zen-landing *,
+  .zen-auth * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
