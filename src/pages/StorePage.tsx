@@ -57,6 +57,7 @@ const StorePage = () => {
   const [banners, setBanners] = useState<any[]>([]);
   const [offers, setOffers] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
+  const [appearance, setAppearance] = useState<{ sectionOrder: string[]; customCss: string }>({ sectionOrder: [], customCss: '' });
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
@@ -71,14 +72,24 @@ const StorePage = () => {
         setReviews(result.reviews || []);
         const businessId = result.business?.id;
         if (businessId) {
-          const [mediaRes, offersRes] = await Promise.all([
+          const [mediaRes, offersRes, appearanceRes] = await Promise.all([
             supabase.from('store_media').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
             supabase.from('business_offers').select('*').eq('business_id', businessId).eq('is_active', true),
+            supabase.from('store_content').select('content').eq('business_id', businessId).eq('section_key', 'appearance').eq('is_visible', true).maybeSingle(),
           ]);
           const media = mediaRes.data || [];
           setBanners(media.filter((m: any) => m.media_type === 'banner' || m.media_type === 'image'));
           setVideos(media.filter((m: any) => m.media_type === 'video'));
           setOffers(offersRes.data || []);
+          if (appearanceRes.data?.content) {
+            try {
+              const settings = JSON.parse(appearanceRes.data.content);
+              setAppearance({
+                sectionOrder: Array.isArray(settings.sectionOrder) ? settings.sectionOrder : [],
+                customCss: typeof settings.customCss === 'string' ? settings.customCss : '',
+              });
+            } catch { setAppearance({ sectionOrder: [], customCss: '' }); }
+          }
         }
       }
       setLoading(false);
@@ -125,7 +136,7 @@ const StorePage = () => {
   };
 
   if (ThemeComponent) {
-    return <ThemeComponent {...themeProps} />;
+    return <div className="store-preview-root"><style>{appearance.customCss}</style><ThemeComponent {...themeProps} /></div>;
   }
 
   // Default theme
@@ -135,12 +146,13 @@ const StorePage = () => {
       banners={banners} offers={offers} videos={videos}
       setSelectedProduct={setSelectedProduct}
       getImageSrc={getImageSrc}
+      appearance={appearance}
     />
   );
 };
 
 // Default theme
-const DefaultStoreTheme = ({ business, products, reviews, banners, offers, videos, setSelectedProduct, getImageSrc }: any) => {
+const DefaultStoreTheme = ({ business, products, reviews, banners, offers, videos, setSelectedProduct, getImageSrc, appearance }: any) => {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [filterCat, setFilterCat] = useState('All');
@@ -155,11 +167,16 @@ const DefaultStoreTheme = ({ business, products, reviews, banners, offers, video
   const productCategories: string[] = ['All', ...Array.from(new Set<string>(products.map((p: any) => String(p.category))))];
   const filteredProducts = filterCat === 'All' ? products : products.filter((p: any) => p.category === filterCat);
   const theme = { footerBg: 'bg-slate-900', footerText: 'text-slate-400', emoji: '⚡', tagline: 'Welcome to Our Store' };
+  const sectionPosition = (id: string) => {
+    const index = appearance?.sectionOrder?.indexOf(id) ?? -1;
+    return { order: index >= 0 ? index + 1 : 100 };
+  };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="store-preview-root min-h-screen bg-white flex flex-col">
+      <style>{appearance?.customCss || ''}</style>
       {/* Nav */}
-      <nav className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-xl border-b border-white/10">
+      <nav style={{ order: 0 }} className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {business.logo_url ? <img src={getImageSrc(business.logo_url)} alt="" className="w-9 h-9 rounded-xl object-cover border border-white/20" />
@@ -189,7 +206,7 @@ const DefaultStoreTheme = ({ business, products, reviews, banners, offers, video
       </nav>
 
       {/* Hero */}
-      <section id="home" className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
+      <section id="home" style={sectionPosition('hero')} className="store-preview-section store-preview-hero relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
         {/* Animated bg shapes */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-10 right-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
@@ -243,7 +260,7 @@ const DefaultStoreTheme = ({ business, products, reviews, banners, offers, video
 
       {/* Banner Slideshow */}
       {banners.length > 0 && (
-        <AnimSection>
+        <AnimSection className="store-preview-section store-preview-banners" style={sectionPosition('banners')}>
           <div className="max-w-6xl mx-auto px-4 py-8">
             <BannerSlideshow banners={banners} />
           </div>
@@ -251,17 +268,17 @@ const DefaultStoreTheme = ({ business, products, reviews, banners, offers, video
       )}
 
       {/* Offers */}
-      <AnimSection>
+      <AnimSection className="store-preview-section store-preview-offers" style={sectionPosition('offers')}>
         <OffersSection offers={offers} theme={theme} />
       </AnimSection>
 
       {/* Videos */}
-      <AnimSection>
+      <AnimSection className="store-preview-section store-preview-videos" style={sectionPosition('videos')}>
         <VideoSection videos={videos} />
       </AnimSection>
 
       {/* Products */}
-      <AnimSection>
+      <AnimSection className="store-preview-section store-preview-products" style={sectionPosition('products')}>
         <section id="products" className="max-w-6xl mx-auto px-4 py-12 md:py-16 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2"><ShoppingBag className="w-6 h-6 text-gray-600" /> Our Products</h2>
@@ -312,7 +329,7 @@ const DefaultStoreTheme = ({ business, products, reviews, banners, offers, video
       </AnimSection>
 
       {/* Reviews */}
-      <AnimSection>
+      <AnimSection className="store-preview-section store-preview-reviews" style={sectionPosition('reviews')}>
         <section id="reviews" className="max-w-6xl mx-auto px-4 py-12 space-y-6">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2"><MessageSquare className="w-6 h-6 text-gray-600" /> Customer Reviews</h2>
           {reviews.length > 0 ? (
@@ -343,7 +360,7 @@ const DefaultStoreTheme = ({ business, products, reviews, banners, offers, video
       </AnimSection>
 
       {/* Contact */}
-      <AnimSection>
+      <AnimSection className="store-preview-section store-preview-contact" style={sectionPosition('contact')}>
         <section id="contact" className="max-w-6xl mx-auto px-4 py-12 space-y-6">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center">Get in Touch</h2>
           <div className="max-w-md mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -361,7 +378,7 @@ const DefaultStoreTheme = ({ business, products, reviews, banners, offers, video
         </section>
       </AnimSection>
 
-      <StoreFooter business={business} theme={theme} />
+      <div className="store-preview-section store-preview-footer" style={sectionPosition('footer')}><StoreFooter business={business} theme={theme} /></div>
 
       {/* Back to top */}
       <AnimatePresence>
