@@ -193,11 +193,10 @@ const SettingsPage = () => {
   const renderDesktopPanel = () => {
     if (!activePanel) return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/5 flex items-center justify-center">
-            <Settings className="w-8 h-8 text-muted-foreground/30" />
-          </div>
-          <p className="text-lg font-semibold text-foreground">Select a setting</p>
+        <div className="max-w-md space-y-3 text-center">
+          <motion.img src="/images/experience-layers/settings-studio.webp" alt="" className="mx-auto w-72 mix-blend-multiply" animate={{ y: [0, -8, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }} />
+          <p className="font-display text-2xl font-black tracking-[-.04em] text-foreground">Your business control room</p>
+          <p className="text-sm leading-6 text-muted-foreground">Choose a setting on the left. Changes stay organized, previewable and easy to undo.</p>
           <p className="text-sm text-muted-foreground">Choose an option from the sidebar to configure.</p>
         </div>
       </div>
@@ -493,13 +492,13 @@ const SettingsPage = () => {
 
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="lg:hidden px-4 pt-4 max-w-4xl mx-auto space-y-6 pb-24">
-        <PageHeader title={t('nav.settings')} backTo="/dashboard" />
+        <PageHeader title={t('nav.settings')} subtitle="Business, devices, account and appearance" backTo="/dashboard" />
 
         <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#141b34] to-[#273154] p-6 text-white shadow-[0_18px_46px_rgba(20,27,52,.2)]">
           <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#c9f26a]">Your control room</p>
           <h2 className="mt-3 font-display text-3xl font-black tracking-[-.05em]">Settings, simplified.</h2>
           <p className="mt-3 max-w-sm text-xs leading-5 text-white/55">Only account, devices, appearance and business configuration live here. Daily tools are now in Modules.</p>
-          <Settings className="absolute -bottom-7 -right-5 h-28 w-28 rotate-12 text-white/10" />
+          <motion.img src="/images/experience-layers/settings-studio.webp" alt="" className="absolute -bottom-10 -right-12 w-52 opacity-45 mix-blend-screen" animate={{ y: [0, -6, 0] }} transition={{ duration: 5, repeat: Infinity }} />
         </section>
 
         {business?.store_slug && (

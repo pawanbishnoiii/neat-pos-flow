@@ -141,6 +141,16 @@
   font-family: 'Manrope', sans-serif;
 }
 
+.zen-app-shell section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+
+.zen-app-shell button,
+.zen-admin-shell button {
+  touch-action: manipulation;
+}
+
 .zen-app-shell .glass-card {
   background: rgba(255, 255, 255, 0.72);
   border-color: rgba(255, 255, 255, 0.82);

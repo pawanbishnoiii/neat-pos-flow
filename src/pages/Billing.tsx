@@ -172,13 +172,14 @@ const Billing = () => {
   return (
     <div className="flex h-screen flex-row bg-transparent lg:pl-[88px]">
       <div className="flex-1 flex flex-col">
-        <div className="m-4 space-y-3 rounded-[26px] border border-white/80 bg-white/72 p-4 shadow-[0_14px_40px_rgba(20,27,52,.06)] backdrop-blur-xl">
+        <div className="relative m-4 space-y-3 overflow-hidden rounded-[26px] border border-white/80 bg-white/76 p-4 shadow-[0_14px_40px_rgba(20,27,52,.06)] backdrop-blur-xl">
+          <img src="/images/experience-layers/billing-flow.webp" alt="" className="pointer-events-none absolute -right-12 -top-16 w-64 opacity-[.13] mix-blend-multiply" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/dashboard')} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
                 <ArrowLeft className="w-4 h-4 text-foreground" />
               </motion.button>
-              <motion.h1 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-bold font-display text-foreground">{categoryConfig?.navLabel.billing || 'Billing'}</motion.h1>
+              <div><p className="text-[9px] font-black uppercase tracking-[.16em] text-[#ff5d3b]">Fast checkout</p><motion.h1 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="font-display text-2xl font-black tracking-[-.04em] text-foreground">{categoryConfig?.navLabel.billing || 'Billing'}</motion.h1></div>
             </div>
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowScanner(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-xs font-semibold glow-primary">

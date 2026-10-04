@@ -85,7 +85,7 @@ const Workspace = () => {
 
   return (
     <div className="px-4 pt-4 lg:pl-24 max-w-5xl mx-auto space-y-4 pb-24">
-      <PageHeader title={categoryConfig?.navLabel.workspace || 'Workspace'} backTo="/dashboard" actions={
+      <PageHeader title={categoryConfig?.navLabel.workspace || 'Workspace'} subtitle="Products, stock and catalog in one place" backTo="/dashboard" actions={
         <div className="flex items-center gap-1.5 flex-wrap">
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowScanner(true)}
             className="px-2.5 py-1.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1">
@@ -104,7 +104,7 @@ const Workspace = () => {
 
       <section className="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-[#7050db] to-[#9d83f7] p-6 text-white shadow-[0_20px_48px_rgba(112,80,219,.22)] md:p-8">
         <div className="relative z-10 max-w-lg"><p className="text-[10px] font-black uppercase tracking-[.18em] text-[#d8ff86]">Smart inventory</p><h2 className="mt-3 font-display text-3xl font-black leading-[.95] tracking-[-.055em] md:text-4xl">Every product.<br />Perfectly in place.</h2><p className="mt-4 text-sm text-white/65">Search, scan and update without losing the rhythm of your day.</p><div className="mt-6 flex gap-3 text-xs font-bold"><span className="rounded-full bg-white/15 px-3 py-2 backdrop-blur-xl">{products.length} items</span><span className="rounded-full bg-[#ffd84d] px-3 py-2 text-[#141b34]">{products.filter(p => p.stock < 20).length} low stock</span></div></div>
-        <img src="/images/clay-retail-categories.png" alt="" className="absolute -bottom-20 -right-20 hidden w-[430px] drop-shadow-2xl md:block" />
+        <motion.img src="/images/experience-layers/inventory-network.webp" alt="" className="absolute -bottom-16 -right-12 hidden w-[390px] mix-blend-screen drop-shadow-2xl md:block" animate={{ y: [0, -8, 0], rotate: [0, 1, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }} />
       </section>
 
       <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="relative">
