@@ -25,6 +25,17 @@ const STORE_THEMES = [
   { id: 'bookshop', label: 'Bookshop', emoji: '📚', desc: 'Warm bookshop & education' },
 ];
 
+const EDITABLE_SECTIONS = [
+  { id: 'hero', label: 'Hero' },
+  { id: 'banners', label: 'Banners' },
+  { id: 'offers', label: 'Offers' },
+  { id: 'videos', label: 'Videos' },
+  { id: 'products', label: 'Products' },
+  { id: 'reviews', label: 'Reviews' },
+  { id: 'contact', label: 'Contact' },
+  { id: 'footer', label: 'Footer' },
+];
+
 const StoreManager = () => {
   const { business, refetch } = useBusiness();
   const { user } = useAuth();
@@ -65,6 +76,10 @@ const StoreManager = () => {
   const [heroCtaText, setHeroCtaText] = useState('');
   const [heroBgType, setHeroBgType] = useState('gradient');
   const [savingHero, setSavingHero] = useState(false);
+  const [sectionOrder, setSectionOrder] = useState(EDITABLE_SECTIONS.map(section => section.id));
+  const [customCss, setCustomCss] = useState('');
+  const [draggedSection, setDraggedSection] = useState<string | null>(null);
+  const [savingAppearance, setSavingAppearance] = useState(false);
 
   // Billing settings state
   const [invoiceLogo, setInvoiceLogo] = useState(true);
@@ -126,6 +141,19 @@ const StoreManager = () => {
           setHeroCtaText(hd.ctaText || '');
           setHeroBgType(hd.bgType || 'gradient');
         } catch { /* not json yet */ }
+      }
+
+      const appearance = contentMap.appearance;
+      if (appearance?.content) {
+        try {
+          const settings = JSON.parse(appearance.content);
+          if (Array.isArray(settings.sectionOrder)) {
+            const validIds = new Set(EDITABLE_SECTIONS.map(section => section.id));
+            const savedOrder = settings.sectionOrder.filter((id: string) => validIds.has(id));
+            setSectionOrder([...savedOrder, ...EDITABLE_SECTIONS.map(section => section.id).filter(id => !savedOrder.includes(id))]);
+          }
+          setCustomCss(settings.customCss || '');
+        } catch { /* ignore malformed settings */ }
       }
 
       // Load billing/printer settings
@@ -265,6 +293,33 @@ const StoreManager = () => {
     setSavingHero(false);
   };
 
+  const handleSaveAppearance = async () => {
+    if (!business) return;
+    setSavingAppearance(true);
+    const { error } = await supabase.from('store_content').upsert({
+      business_id: business.id,
+      section_key: 'appearance',
+      title: 'Store appearance',
+      content: JSON.stringify({ sectionOrder, customCss }),
+      is_visible: true,
+    }, { onConflict: 'business_id,section_key' });
+    if (error) toast({ title: 'Could not save appearance', description: error.message, variant: 'destructive' });
+    else toast({ title: 'Store appearance saved' });
+    setSavingAppearance(false);
+  };
+
+  const moveSection = (from: string, to: string) => {
+    setSectionOrder(current => {
+      const next = [...current];
+      const fromIndex = next.indexOf(from);
+      const toIndex = next.indexOf(to);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return current;
+      next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, from);
+      return next;
+    });
+  };
+
   const handleSaveBilling = async () => {
     if (!business) return;
     setSavingBilling(true);
@@ -308,6 +363,7 @@ const StoreManager = () => {
           {[
             { id: 'overview', label: 'Overview', icon: Globe },
             { id: 'appearance', label: 'Theme', icon: Palette },
+            { id: 'editor', label: 'Live Editor', icon: GripVertical },
             { id: 'hero', label: 'Hero', icon: Layout },
             { id: 'media', label: 'Banners', icon: Image },
             { id: 'footer', label: 'Footer', icon: MapPin },
@@ -386,6 +442,76 @@ const StoreManager = () => {
             className="w-full py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Theme
           </motion.button>
+        </TabsContent>
+
+        {/* LIVE STORE EDITOR */}
+        <TabsContent value="editor" className="space-y-4 mt-4">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4 items-start">
+            <div className="space-y-4">
+              <div className="rounded-2xl glass-card shadow-soft p-5 space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Store sections</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Drag sections to set their order on your public store.</p>
+                </div>
+                <div className="space-y-2">
+                  {sectionOrder.map(id => {
+                    const section = EDITABLE_SECTIONS.find(item => item.id === id);
+                    if (!section) return null;
+                    return (
+                      <div key={id} draggable
+                        onDragStart={() => setDraggedSection(id)}
+                        onDragOver={event => event.preventDefault()}
+                        onDrop={() => { if (draggedSection) moveSection(draggedSection, id); setDraggedSection(null); }}
+                        onDragEnd={() => setDraggedSection(null)}
+                        className={`flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 cursor-grab active:cursor-grabbing ${draggedSection === id ? 'opacity-50' : ''}`}>
+                        <GripVertical className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium text-foreground">{section.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div>
+                  <label className={labelClass}>Custom CSS</label>
+                  <textarea value={customCss} onChange={event => setCustomCss(event.target.value)} rows={8}
+                    placeholder={'.store-preview-root h1 { color: #176b87; }'}
+                    className={`${inputClass} resize-y font-mono text-xs`} />
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">Use `.store-preview-root` to target your public store.</p>
+                </div>
+                <motion.button whileTap={{ scale: 0.98 }} onClick={handleSaveAppearance} disabled={savingAppearance}
+                  className="w-full py-2.5 rounded-lg gradient-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                  {savingAppearance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Store Design
+                </motion.button>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-background overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <p className="text-xs font-semibold text-foreground">Live preview</p>
+                <span className="text-[10px] text-muted-foreground">Updates as you edit</span>
+              </div>
+              <div className="store-preview-root min-h-[520px] overflow-auto bg-card p-4 sm:p-6">
+                <style>{customCss}</style>
+                <div className="mx-auto max-w-lg space-y-4">
+                  {sectionOrder.map(id => {
+                    const section = EDITABLE_SECTIONS.find(item => item.id === id);
+                    if (!section) return null;
+                    return (
+                      <div key={id} className={`store-preview-section store-preview-${id} rounded-lg border border-border p-4 ${id === 'hero' ? 'bg-primary text-primary-foreground py-8' : 'bg-background'}`}>
+                        {id === 'hero' ? <>
+                          <p className="text-[10px] uppercase opacity-70">{business?.business_name || 'Your store'}</p>
+                          <h2 className="mt-2 text-2xl font-bold">{heroTitle || business?.business_name || 'Welcome to our store'}</h2>
+                          <p className="mt-2 text-sm opacity-80">{heroSubtitle || 'A short introduction to your store.'}</p>
+                          <span className="mt-4 inline-flex rounded-md bg-background px-3 py-1.5 text-xs font-semibold text-foreground">{heroCtaText || 'Shop Now'}</span>
+                        </> : <>
+                          <p className="text-sm font-semibold text-foreground">{section.label}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{id === 'products' ? `${stats.products} products` : id === 'offers' ? `${stats.offers} active offers` : 'Store content'}</p>
+                        </>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* HERO SECTION EDITOR */}
