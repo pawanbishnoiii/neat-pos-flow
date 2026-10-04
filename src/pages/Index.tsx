@@ -30,6 +30,13 @@ const steps = [
   { id: '03', title: 'Make your first sale', copy: 'Bill, print and share—then watch your dashboard come alive in real time.', color: '#90c52d' },
 ];
 
+const businessTimeline = [
+  { icon: '/images/generated-icons/scanner.png', label: '08:30', title: 'Open & scan', copy: 'Your counter wakes up with stock, pricing and yesterday’s context already synced.', tone: 'bg-[#dfe8ff]' },
+  { icon: '/images/generated-icons/receipt.png', label: '12:15', title: 'Rush hour, handled', copy: 'Fast billing, smart shortcuts and beautiful receipts keep every queue moving.', tone: 'bg-[#ffe1d8]' },
+  { icon: '/images/generated-icons/customers.png', label: '16:40', title: 'Customers remembered', copy: 'Credit, loyalty and purchase history appear at just the right moment.', tone: 'bg-[#eee7ff]' },
+  { icon: '/images/generated-icons/dashboard.png', label: '21:00', title: 'Close with clarity', copy: 'A calm daily summary turns every sale into tomorrow’s better decision.', tone: 'bg-[#e5f6bd]' },
+];
+
 const testimonials = [
   { quote: 'The first POS my team understood without training. Billing feels genuinely effortless now.', name: 'Priya Sharma', role: 'Krishna Grocery, Jaipur', initials: 'PS', color: '#ffd84d' },
   { quote: 'I run the counter from my phone and still know exactly what is selling across the whole week.', name: 'Ahmed Khan', role: 'TechZone, Lucknow', initials: 'AK', color: '#c9b6ff' },
@@ -78,6 +85,8 @@ const Index = () => {
       gsap.utils.toArray<HTMLElement>('.reveal').forEach((element) => gsap.from(element, { y: 45, opacity: 0, duration: 0.85, ease: 'power3.out', scrollTrigger: { trigger: element, start: 'top 84%', once: true } }));
       gsap.to('.hero-art', { yPercent: 9, ease: 'none', scrollTrigger: { trigger: '.hero-shell', start: 'top top', end: 'bottom top', scrub: 1 } });
       gsap.to('.story-image', { scale: 1.08, ease: 'none', scrollTrigger: { trigger: '.story-wrap', start: 'top bottom', end: 'bottom top', scrub: 1 } });
+      gsap.fromTo('.timeline-progress', { scaleY: 0 }, { scaleY: 1, transformOrigin: 'top center', ease: 'none', scrollTrigger: { trigger: '.timeline-shell', start: 'top 65%', end: 'bottom 68%', scrub: 1 } });
+      gsap.utils.toArray<HTMLElement>('.timeline-card').forEach((card, index) => gsap.from(card, { x: index % 2 ? 70 : -70, opacity: 0, rotate: index % 2 ? 1.5 : -1.5, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: card, start: 'top 82%', end: 'top 58%', scrub: 1 } }));
     }, rootRef);
     return () => context.revert();
   }, [reduceMotion]);
@@ -195,6 +204,16 @@ const Index = () => {
                   </div>
                 </motion.article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="timeline-shell relative overflow-hidden bg-[#141b34] px-4 py-24 text-white md:px-8 md:py-36">
+          <div className="absolute left-[8%] top-32 h-72 w-72 rounded-full bg-[#3568f5]/20 blur-[90px]" /><div className="absolute bottom-20 right-[5%] h-80 w-80 rounded-full bg-[#ff5d3b]/15 blur-[100px]" />
+          <div className="relative mx-auto max-w-[1160px] lg:grid lg:grid-cols-[.8fr_1.2fr] lg:gap-20">
+            <div className="mb-14 lg:mb-0"><div className="lg:sticky lg:top-28"><div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.07] px-3 py-2 text-[11px] font-black uppercase tracking-[.16em] text-[#c9f26a]"><Sparkles className="h-3.5 w-3.5" /> Scroll the business day</div><h2 className="mt-6 font-display text-[clamp(2.8rem,5vw,5.4rem)] font-black leading-[.9] tracking-[-.07em]">From shutter up<br />to <span className="text-[#ff795c]">lights out.</span></h2><p className="mt-6 max-w-md text-base leading-7 text-white/55">One fluid workspace follows your rhythm—revealing what matters as the day moves forward.</p><div className="mt-9 flex gap-3">{['dashboard','inventory','offer'].map((name, index) => <motion.img key={name} src={`/images/generated-icons/${name}.png`} alt="" className="h-16 w-16 object-contain" animate={reduceMotion ? undefined : { y: [0, -8 - index * 2, 0], rotate: [0, index - 1, 0] }} transition={{ duration: 4 + index, repeat: Infinity, ease: 'easeInOut' }} />)}</div></div></div>
+            <div className="relative space-y-8 pl-8 md:pl-14"><div className="absolute bottom-12 left-[11px] top-12 w-[3px] rounded-full bg-white/10 md:left-[23px]" /><div className="timeline-progress absolute bottom-12 left-[11px] top-12 w-[3px] rounded-full bg-gradient-to-b from-[#ffd84d] via-[#ff6847] to-[#c9f26a] md:left-[23px]" />
+              {businessTimeline.map((item, index) => <article key={item.label} className={`timeline-card relative overflow-hidden rounded-[30px] border border-white/70 ${item.tone} p-5 text-[#141b34] shadow-[0_28px_70px_rgba(0,0,0,.22)] md:p-7`}><span className="absolute -left-[30px] top-12 h-4 w-4 rounded-full border-4 border-[#141b34] bg-[#ffd84d] md:-left-[39px]" /><div className="flex items-center gap-5"><img src={item.icon} alt="" className="h-20 w-20 shrink-0 object-contain md:h-24 md:w-24" loading="lazy" /><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-[#ff5d3b]">{item.label} · chapter {index + 1}</p><h3 className="mt-2 font-display text-2xl font-black tracking-[-.045em] md:text-3xl">{item.title}</h3><p className="mt-2 text-sm leading-6 text-[#5f6577]">{item.copy}</p></div></div></article>)}
             </div>
           </div>
         </section>

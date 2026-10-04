@@ -245,28 +245,32 @@ const AdminDashboard = () => {
   const bizCategories = ['All', ...new Set(allBusinesses.map(b => b.category))];
 
   const statCards = [
-    { title: 'Users', value: stats.users, icon: Users, color: 'text-primary' },
-    { title: 'Businesses', value: stats.businesses, icon: Store, color: 'text-accent' },
-    { title: 'Products', value: stats.products, icon: Package, color: 'text-success' },
-    { title: 'Invoices', value: stats.invoices, icon: Receipt, color: 'text-warning' },
-    { title: 'Customers', value: stats.customers, icon: Users, color: 'text-primary' },
-    { title: 'Gallery', value: stats.gallery, icon: Database, color: 'text-accent' },
-    { title: 'Reviews', value: stats.reviews, icon: Tag, color: 'text-success' },
-    { title: 'Offers', value: stats.offers, icon: Tag, color: 'text-warning' },
+    { title: 'Users', value: stats.users, icon: Users, surface: 'bg-[#dfe8ff]', asset: 'customers' },
+    { title: 'Businesses', value: stats.businesses, icon: Store, surface: 'bg-[#ffe1d8]', asset: 'dashboard' },
+    { title: 'Products', value: stats.products, icon: Package, surface: 'bg-[#e8f6c6]', asset: 'inventory' },
+    { title: 'Invoices', value: stats.invoices, icon: Receipt, surface: 'bg-[#fff0b8]', asset: 'receipt' },
+    { title: 'Customers', value: stats.customers, icon: Users, surface: 'bg-[#eee7ff]', asset: 'customers' },
+    { title: 'Gallery', value: stats.gallery, icon: Database, surface: 'bg-[#d9f5ee]', asset: 'scanner' },
+    { title: 'Reviews', value: stats.reviews, icon: Tag, surface: 'bg-[#ffe7f2]', asset: 'reviews' },
+    { title: 'Offers', value: stats.offers, icon: Tag, surface: 'bg-[#ffe5d6]', asset: 'offer' },
   ];
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5 pb-24">
+    <div className="mx-auto max-w-7xl space-y-5 p-4 pb-24 md:p-7 lg:p-9">
       {/* Overview */}
       {activeTab === 'overview' && (
         <div className="space-y-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[32px] bg-[#141b34] p-6 text-white shadow-[0_30px_80px_rgba(20,27,52,.18)] md:p-9">
+            <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#6b55da]/55 blur-3xl" /><div className="absolute bottom-[-8rem] left-[28%] h-64 w-64 rounded-full bg-[#ff6847]/25 blur-3xl" />
+            <div className="relative z-10 grid items-center gap-6 md:grid-cols-[1fr_280px]"><div><div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[.18em] text-[#c9f26a]"><Shield className="h-3.5 w-3.5" /> Live ecosystem</div><h1 className="mt-5 max-w-2xl font-display text-[clamp(2.5rem,5vw,4.6rem)] font-black leading-[.9] tracking-[-.07em]">Your whole network,<br /><span className="text-[#ff795c]">beautifully visible.</span></h1><p className="mt-4 max-w-xl text-sm leading-6 text-white/55">Monitor stores, customers, products and platform health from one calm command centre.</p></div><motion.img src="/images/generated-icons/dashboard.png" alt="3D analytics dashboard" className="mx-auto hidden w-64 drop-shadow-[0_24px_32px_rgba(0,0,0,.35)] md:block" animate={{ y: [0, -10, 0], rotate: [0, 1.5, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }} /></div>
+          </motion.section>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {statCards.map((card, i) => {
               const Icon = card.icon;
               return (
-                <motion.div key={card.title} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="rounded-2xl glass-card shadow-soft p-4">
-                  <div className="flex items-center gap-2 mb-2"><Icon className={`w-4 h-4 ${card.color}`} /><span className="text-xs text-muted-foreground font-medium">{card.title}</span></div>
-                  <p className="text-2xl font-bold font-display text-foreground">{card.value}</p>
+                <motion.div key={card.title} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} transition={{ delay: i * 0.04 }} className={`relative min-h-[145px] overflow-hidden rounded-[24px] border border-white/70 p-4 shadow-[0_16px_40px_rgba(20,27,52,.07)] ${card.surface}`}>
+                  <div className="relative z-10 flex items-center gap-2"><Icon className="h-4 w-4 text-[#141b34]/55" /><span className="text-xs font-bold text-[#141b34]/55">{card.title}</span></div>
+                  <p className="relative z-10 mt-7 font-display text-3xl font-black tracking-[-.05em] text-[#141b34]">{card.value}</p><img src={`/images/generated-icons/${card.asset}.png`} alt="" className="absolute -bottom-8 -right-7 h-28 w-28 object-contain opacity-90" />
                 </motion.div>
               );
             })}

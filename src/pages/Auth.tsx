@@ -89,19 +89,19 @@ const Auth = () => {
   const busy = loading || authLoading || Boolean(oauthLoading);
 
   return (
-    <main className="zen-auth min-h-screen bg-[#fbf8f2] p-3 text-[#141b34] md:p-5">
-      <div className="mx-auto grid min-h-[calc(100vh-24px)] max-w-[1460px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_90px_rgba(20,27,52,.12)] md:min-h-[calc(100vh-40px)] lg:grid-cols-[1.02fr_.98fr]">
-        <section className="relative hidden min-h-full overflow-hidden bg-[#141b34] p-10 text-white lg:flex lg:flex-col xl:p-14">
+    <main className="zen-auth flex min-h-screen items-center bg-[#fbf8f2] p-3 text-[#141b34] md:p-5">
+      <div className="mx-auto grid min-h-[calc(100vh-24px)] w-full max-w-[1220px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_90px_rgba(20,27,52,.12)] md:min-h-[calc(100vh-40px)] lg:min-h-0 lg:grid-cols-[.96fr_1.04fr] xl:h-[min(820px,calc(100vh-40px))]">
+        <section className="relative hidden min-h-full overflow-hidden bg-[#141b34] p-9 text-white lg:flex lg:flex-col xl:p-11">
           <div className="absolute -left-24 -top-20 h-80 w-80 rounded-full bg-[#3568f5]/50 blur-[100px]" />
           <div className="absolute -bottom-32 -right-28 h-96 w-96 rounded-full bg-[#ff5d3b]/45 blur-[110px]" />
           <div className="relative z-10"><BrandMark inverse /></div>
-          <div className="relative z-10 my-auto py-12">
+          <div className="relative z-10 my-auto py-7">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-[#c9f26a]"><Sparkles className="h-3.5 w-3.5" /> Your calmer business starts here</span>
-              <h1 className="mt-7 max-w-2xl font-display text-[clamp(3.5rem,5.5vw,6.5rem)] font-black leading-[.84] tracking-[-.08em]">One login.<br /><span className="text-[#ff6e4f]">Every sale.</span></h1>
-              <p className="mt-6 max-w-md text-base leading-7 text-white/60">Run your counter, stockroom, customer book and online store from one bright, fast workspace.</p>
+              <h1 className="mt-5 max-w-2xl font-display text-[clamp(3rem,4.3vw,5rem)] font-black leading-[.84] tracking-[-.08em]">One login.<br /><span className="text-[#ff6e4f]">Every sale.</span></h1>
+              <p className="mt-4 max-w-md text-sm leading-6 text-white/60">Run your counter, stockroom, customer book and online store from one bright, fast workspace.</p>
             </motion.div>
-            <motion.div initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: .18, duration: .8 }} className="relative mt-10 max-w-[620px]">
+            <motion.div initial={{ opacity: 0, scale: .92 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: .18, duration: .8 }} className="relative mt-6 max-w-[470px]">
               <div className="overflow-hidden rounded-[32px] border border-white/15 bg-white/5 p-2 shadow-2xl"><img src="/images/clay-commerce.webp" alt="Colorful Zen POS retail toolkit" className="aspect-[3/2] w-full rounded-[26px] object-cover" /></div>
               <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity }} className="absolute -bottom-5 -right-2 flex items-center gap-3 rounded-2xl border border-white/60 bg-white px-4 py-3 text-[#141b34] shadow-2xl"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#c9f26a]"><BadgeCheck className="h-4 w-4" /></span><div><p className="text-[10px] font-bold uppercase tracking-wider text-[#74798a]">Ready to sell</p><p className="text-sm font-extrabold">In under 3 minutes</p></div></motion.div>
             </motion.div>
@@ -109,17 +109,17 @@ const Auth = () => {
           <div className="relative z-10 flex flex-wrap gap-5 text-xs font-semibold text-white/55"><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#c9f26a]" /> Secure by design</span><span className="flex items-center gap-2"><Zap className="h-4 w-4 text-[#ffd84d]" /> Fast on every device</span></div>
         </section>
 
-        <section className="relative flex min-h-full items-center justify-center px-5 py-10 sm:px-10 md:px-16 xl:px-24">
+        <section className="relative flex min-h-full items-center justify-center px-5 py-8 sm:px-10 md:px-14 xl:px-16">
           <button onClick={() => navigate('/landing')} className="absolute left-5 top-5 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-[#74798a] transition-colors hover:bg-[#141b34]/5 hover:text-[#141b34] md:left-8 md:top-8"><ArrowLeft className="h-4 w-4" /> Back to home</button>
-          <div className="w-full max-w-[470px] pt-12 lg:pt-0">
+          <div className="w-full max-w-[420px] pt-12 lg:pt-0">
             <div className="mb-9 lg:hidden"><BrandMark /></div>
             <motion.div key={isLogin ? 'login-title' : 'signup-title'} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
               <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#ff5d3b]">{isLogin ? 'Welcome back' : 'Start for free'}</p>
-              <h2 className="mt-3 font-display text-[clamp(2.5rem,5vw,4rem)] font-black leading-[.92] tracking-[-.065em]">{isLogin ? <>Good to see<br />you again.</> : <>Meet your new<br />business brain.</>}</h2>
+              <h2 className="mt-2 font-display text-[clamp(2.35rem,4vw,3.4rem)] font-black leading-[.92] tracking-[-.065em]">{isLogin ? <>Good to see<br />you again.</> : <>Meet your new<br />business brain.</>}</h2>
               <p className="mt-4 text-sm leading-6 text-[#74798a]">{isLogin ? 'Log in to pick up right where you left off.' : 'No card. No setup fee. Just a smarter way to sell.'}</p>
             </motion.div>
 
-            <div className="mt-8 grid grid-cols-2 rounded-2xl bg-[#f1ede6] p-1.5">
+            <div className="mt-6 grid grid-cols-2 rounded-2xl bg-[#f1ede6] p-1.5">
               {['Log in', 'Create account'].map((tab, index) => { const active = index === 0 ? isLogin : !isLogin; return <button key={tab} type="button" onClick={() => setIsLogin(index === 0)} className={`relative rounded-[13px] py-3 text-sm font-extrabold transition-colors ${active ? 'text-[#141b34]' : 'text-[#8b8f9d]'}`}>{active && <motion.span layoutId="auth-tab" className="absolute inset-0 rounded-[13px] bg-white shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 34 }} />}<span className="relative z-10">{tab}</span></button>; })}
             </div>
 
