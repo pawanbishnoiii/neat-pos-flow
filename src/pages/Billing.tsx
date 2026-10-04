@@ -66,9 +66,9 @@ const Billing = () => {
   // Mobile layout: Cart on top, products below
   if (isMobile) {
     return (
-      <div className="h-screen flex flex-col">
+      <div className="flex h-screen flex-col bg-transparent lg:pl-24">
         {/* Mobile Header */}
-        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+        <div className="mx-4 mt-4 flex items-center justify-between rounded-[22px] border border-white/80 bg-white/75 p-3 shadow-[0_12px_34px_rgba(20,27,52,.06)] backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/dashboard')} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
               <ArrowLeft className="w-4 h-4 text-foreground" />
@@ -170,9 +170,9 @@ const Billing = () => {
 
   // Desktop layout: products left, cart right (original)
   return (
-    <div className="h-screen flex flex-row">
+    <div className="flex h-screen flex-row bg-transparent lg:pl-[88px]">
       <div className="flex-1 flex flex-col">
-        <div className="px-4 pt-4 space-y-3">
+        <div className="m-4 space-y-3 rounded-[26px] border border-white/80 bg-white/72 p-4 shadow-[0_14px_40px_rgba(20,27,52,.06)] backdrop-blur-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/dashboard')} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center">
@@ -217,7 +217,7 @@ const Billing = () => {
           )}
         </div>
       </div>
-      <div className="w-96 border-l border-border bg-card flex flex-col">
+      <div className="m-4 ml-0 flex w-96 flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white/80 shadow-[0_18px_50px_rgba(20,27,52,.1)] backdrop-blur-xl">
         <CartPanel />
       </div>
       <BarcodeScanner open={showScanner} onClose={() => setShowScanner(false)} onScan={handleBarcodeScan} />

@@ -25,6 +25,8 @@ import StorePage from "@/pages/StorePage";
 import StoreManager from "@/pages/StoreManager";
 import ExpenseTracker from "@/pages/ExpenseTracker";
 import CreditLedger from "@/pages/CreditLedger";
+import ModulesHub from "@/pages/ModulesHub";
+import ReviewsPage from "@/pages/ReviewsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,7 +47,9 @@ const App = () => (
               <Route path="/onboarding" element={<ProtectedRoute><AppLayout><Onboarding /></AppLayout></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute requireBusiness><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/workspace" element={<ProtectedRoute requireBusiness><AppLayout><Workspace /></AppLayout></ProtectedRoute>} />
-              <Route path="/billing" element={<ProtectedRoute requireBusiness><Billing /></ProtectedRoute>} />
+              <Route path="/billing" element={<ProtectedRoute requireBusiness><AppLayout><Billing /></AppLayout></ProtectedRoute>} />
+              <Route path="/modules" element={<ProtectedRoute requireBusiness><AppLayout><ModulesHub /></AppLayout></ProtectedRoute>} />
+              <Route path="/reviews" element={<ProtectedRoute requireBusiness><AppLayout><ReviewsPage /></AppLayout></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute requireBusiness><AppLayout><Reports /></AppLayout></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute requireBusiness><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
               <Route path="/history" element={<ProtectedRoute requireBusiness><AppLayout><BillHistory /></AppLayout></ProtectedRoute>} />

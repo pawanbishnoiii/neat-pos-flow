@@ -102,10 +102,15 @@ const Workspace = () => {
         </div>
       } />
 
+      <section className="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-[#7050db] to-[#9d83f7] p-6 text-white shadow-[0_20px_48px_rgba(112,80,219,.22)] md:p-8">
+        <div className="relative z-10 max-w-lg"><p className="text-[10px] font-black uppercase tracking-[.18em] text-[#d8ff86]">Smart inventory</p><h2 className="mt-3 font-display text-3xl font-black leading-[.95] tracking-[-.055em] md:text-4xl">Every product.<br />Perfectly in place.</h2><p className="mt-4 text-sm text-white/65">Search, scan and update without losing the rhythm of your day.</p><div className="mt-6 flex gap-3 text-xs font-bold"><span className="rounded-full bg-white/15 px-3 py-2 backdrop-blur-xl">{products.length} items</span><span className="rounded-full bg-[#ffd84d] px-3 py-2 text-[#141b34]">{products.filter(p => p.stock < 20).length} low stock</span></div></div>
+        <img src="/images/clay-retail-categories.png" alt="" className="absolute -bottom-20 -right-20 hidden w-[430px] drop-shadow-2xl md:block" />
+      </section>
+
       <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input type="text" placeholder="Search by name, SKU, or barcode..." value={search} onChange={e => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          className="w-full rounded-[20px] border border-white/80 bg-white/75 py-4 pl-11 pr-4 text-sm shadow-[0_12px_34px_rgba(20,27,52,.06)] outline-none backdrop-blur-xl placeholder:text-[#9a9daa] focus:ring-4 focus:ring-[#7050db]/10" />
       </motion.div>
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
@@ -134,7 +139,7 @@ const Workspace = () => {
           const hasDiscount = product.discountPrice < product.price;
           return (
             <motion.div key={product.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              className="rounded-2xl glass-card shadow-soft overflow-hidden group">
+              whileHover={{ y: -5 }} className="group overflow-hidden rounded-[26px] border border-white/80 bg-white/75 shadow-[0_14px_38px_rgba(20,27,52,.07)] backdrop-blur-xl">
               <div className="aspect-[2.5/1] bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center relative overflow-hidden">
                 {imgSrc ? <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-muted-foreground/30" />}
                 {hasDiscount && <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground">{Math.round(((product.price - product.discountPrice) / product.price) * 100)}% OFF</span>}

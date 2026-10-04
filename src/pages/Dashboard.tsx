@@ -1,54 +1,34 @@
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { IndianRupee, Package, TrendingUp, AlertTriangle, LogOut, Shield, Receipt, Users, Tag, BarChart3, Settings, Globe, ExternalLink, Palette, MessageCircle, QrCode, Share2, TrendingDown, CreditCard } from 'lucide-react';
-import NotificationBell from '@/components/notifications/NotificationBell';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import StatCard from '@/components/dashboard/StatCard';
+import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
+import dayjs from 'dayjs';
+import {
+  ArrowUpRight, Boxes, CreditCard, IndianRupee, LogOut, MessageSquareHeart,
+  PackageCheck, ReceiptText, ScanLine, Shield, Sparkles, Tags, TrendingDown,
+  TrendingUp, UsersRound, WalletCards,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness } from '@/hooks/useBusiness';
-import { useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
-import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getCategoryConfig } from '@/lib/categoryConfig';
-import { useToast } from '@/hooks/use-toast';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
-// Animated counter component
-const AnimatedCounter = ({ value, prefix = '' }: { value: number; prefix?: string }) => {
-  const [displayed, setDisplayed] = useState(0);
-  useEffect(() => {
-    const duration = 800;
-    const start = Date.now();
-    const startVal = displayed;
-    const tick = () => {
-      const elapsed = Date.now() - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayed(Math.round(startVal + (value - startVal) * eased));
-      if (progress < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [value]);
-  return <span>{prefix}{displayed.toLocaleString()}</span>;
-};
+type Stats = { todaySales: number; monthlySales: number; totalProducts: number; lowStock: number; totalCustomers: number; totalInvoices: number; activeOffers: number };
 
 const Dashboard = () => {
-  const { user, signOut, isAdmin } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const { business } = useBusiness();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [stats, setStats] = useState({ todaySales: 0, monthlySales: 0, totalProducts: 0, lowStock: 0, totalCustomers: 0, totalInvoices: 0, activeOffers: 0 });
-  const [revenueData, setRevenueData] = useState<any[]>([]);
-
-  const categoryConfig = business ? getCategoryConfig(business.category) : null;
-  const CategoryIcon = categoryConfig?.icon || Package;
+  const reduceMotion = useReducedMotion();
+  const [stats, setStats] = useState<Stats>({ todaySales: 0, monthlySales: 0, totalProducts: 0, lowStock: 0, totalCustomers: 0, totalInvoices: 0, activeOffers: 0 });
+  const [revenue, setRevenue] = useState<{ name: string; revenue: number }[]>([]);
 
   useEffect(() => {
     if (!business) return;
-    const fetchDashboardData = async () => {
+    const load = async () => {
       const today = dayjs().startOf('day').toISOString();
       const monthStart = dayjs().startOf('month').toISOString();
-
-      const [todayInv, monthInv, prods, custs, allInv, offers] = await Promise.all([
+      const [todayInv, monthInv, products, customers, invoices, offers] = await Promise.all([
         supabase.from('invoices').select('grand_total').eq('business_id', business.id).gte('created_at', today),
         supabase.from('invoices').select('grand_total').eq('business_id', business.id).gte('created_at', monthStart),
         supabase.from('products').select('id, stock').eq('business_id', business.id),
@@ -56,150 +36,61 @@ const Dashboard = () => {
         supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('business_id', business.id),
         supabase.from('business_offers').select('id', { count: 'exact', head: true }).eq('business_id', business.id).eq('is_active', true),
       ]);
-
-      const todaySales = (todayInv.data || []).reduce((s, i) => s + Number(i.grand_total), 0);
-      const monthlySales = (monthInv.data || []).reduce((s, i) => s + Number(i.grand_total), 0);
-      const lowStock = (prods.data || []).filter(p => p.stock < 20).length;
-
-      setStats({ todaySales, monthlySales, totalProducts: prods.data?.length || 0, lowStock, totalCustomers: custs.count || 0, totalInvoices: allInv.count || 0, activeOffers: offers.count || 0 });
-
-      const weekData = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = dayjs().subtract(i, 'day');
-        const dayStart = d.startOf('day').toISOString();
-        const dayEnd = d.endOf('day').toISOString();
-        const { data: dayInv } = await supabase.from('invoices').select('grand_total').eq('business_id', business.id).gte('created_at', dayStart).lte('created_at', dayEnd);
-        weekData.push({ name: d.format('ddd'), revenue: (dayInv || []).reduce((s, inv) => s + Number(inv.grand_total), 0) });
-      }
-      setRevenueData(weekData);
+      setStats({
+        todaySales: (todayInv.data || []).reduce((sum, item) => sum + Number(item.grand_total), 0),
+        monthlySales: (monthInv.data || []).reduce((sum, item) => sum + Number(item.grand_total), 0),
+        totalProducts: products.data?.length || 0,
+        lowStock: (products.data || []).filter((item) => item.stock < 20).length,
+        totalCustomers: customers.count || 0,
+        totalInvoices: invoices.count || 0,
+        activeOffers: offers.count || 0,
+      });
+      const points = await Promise.all(Array.from({ length: 7 }, async (_, index) => {
+        const date = dayjs().subtract(6 - index, 'day');
+        const { data } = await supabase.from('invoices').select('grand_total').eq('business_id', business.id).gte('created_at', date.startOf('day').toISOString()).lte('created_at', date.endOf('day').toISOString());
+        return { name: date.format('ddd'), revenue: (data || []).reduce((sum, item) => sum + Number(item.grand_total), 0) };
+      }));
+      setRevenue(points);
     };
-    fetchDashboardData();
-  }, [business?.id]);
+    void load();
+  }, [business]);
 
-  const storeUrl = business?.store_slug ? `${window.location.origin}/store/${business.store_slug}` : '';
-
-  // Dynamic quick actions based on category
-  const getQuickActions = () => {
-    const base = [
-      { icon: Package, label: categoryConfig?.navLabel.workspace || 'Workspace', desc: 'Manage products', path: '/workspace' },
-      { icon: IndianRupee, label: categoryConfig?.navLabel.billing || 'New Bill', desc: 'Create invoice', path: '/billing' },
-      { icon: Receipt, label: 'History', desc: 'Past invoices', path: '/history' },
-      { icon: Users, label: categoryConfig?.navLabel.customers || 'Customers', desc: 'Customer CRM', path: '/customers' },
-      { icon: Tag, label: 'Offers', desc: 'Discounts & coupons', path: '/offers' },
-      { icon: TrendingDown, label: 'Expenses', desc: 'Track kharche', path: '/expenses' },
-      { icon: CreditCard, label: 'Udhar', desc: 'Credit ledger', path: '/credit-ledger' },
-      { icon: BarChart3, label: 'Reports', desc: 'Analytics', path: '/reports' },
-      { icon: Globe, label: 'Store', desc: 'Public page', path: storeUrl ? `/store/${business?.store_slug}` : '/settings' },
-      { icon: Palette, label: 'Store Manager', desc: 'Customize store', path: '/store-manager' },
-      { icon: Settings, label: 'Settings', desc: 'Configuration', path: '/settings' },
-    ];
-    return base;
-  };
-
-  const handleWhatsAppShare = () => {
-    if (!storeUrl) return;
-    const text = `Check out ${business?.business_name}: ${storeUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-  };
+  const modules = [
+    { path: '/offers', label: 'Offers', sub: 'ऑफ़र और कूपन', value: stats.activeOffers, icon: Tags, color: 'bg-[#ff8d72]' },
+    { path: '/customers', label: 'Customers', sub: 'ग्राहक', value: stats.totalCustomers, icon: UsersRound, color: 'bg-[#c9f26a]' },
+    { path: '/history', label: 'Bill History', sub: 'बिल इतिहास', value: stats.totalInvoices, icon: ReceiptText, color: 'bg-[#ffd84d]' },
+    { path: '/expenses', label: 'Expenses', sub: 'खर्चे', value: 'Track', icon: TrendingDown, color: 'bg-[#c9b6ff]' },
+    { path: '/credit-ledger', label: 'Credit', sub: 'उधार खाता', value: 'Open', icon: CreditCard, color: 'bg-[#79b8ff]' },
+    { path: '/reviews', label: 'Reviews', sub: 'रिव्यू', value: 'View', icon: MessageSquareHeart, color: 'bg-[#ffb4ca]' },
+  ];
+  const cards = [
+    { label: 'Today', value: `₹${stats.todaySales.toLocaleString()}`, icon: IndianRupee, color: 'bg-[#141b34] text-white', note: 'Live sales' },
+    { label: 'This month', value: `₹${stats.monthlySales.toLocaleString()}`, icon: TrendingUp, color: 'bg-[#c9f26a]', note: 'Revenue' },
+    { label: 'Products', value: stats.totalProducts.toString(), icon: Boxes, color: 'bg-[#c9b6ff]', note: `${stats.lowStock} low stock` },
+    { label: 'Invoices', value: stats.totalInvoices.toString(), icon: ReceiptText, color: 'bg-[#ffd84d]', note: 'All time' },
+  ];
 
   return (
-    <div className="px-4 pt-4 lg:pl-24 max-w-5xl mx-auto space-y-5 pb-24">
-      <div className="flex items-center justify-between">
-        <div>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-muted-foreground font-medium">{dayjs().format('dddd, D MMMM YYYY')}</motion.p>
-          <motion.h1 initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-bold font-display text-foreground">{business?.business_name || 'Dashboard'}</motion.h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          {isAdmin && <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/admin')} className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center"><Shield className="w-4 h-4 text-destructive" /></motion.button>}
-          <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center"><LogOut className="w-4 h-4 text-foreground" /></motion.button>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1380px] space-y-5 px-4 pt-4 pb-24 lg:pl-24">
+      <header className="flex items-center justify-between rounded-[24px] border border-white/70 bg-white/68 p-3 shadow-[0_12px_38px_rgba(20,27,52,.06)] backdrop-blur-2xl md:p-4">
+        <div><p className="text-[10px] font-black uppercase tracking-[.17em] text-[#ff5d3b]">{dayjs().format('dddd · D MMMM')}</p><h1 className="font-display text-xl font-black tracking-[-.045em] md:text-2xl">{business?.business_name || 'Your business'}</h1></div>
+        <div className="flex items-center gap-2"><NotificationBell />{isAdmin && <button onClick={() => navigate('/admin')} className="grid h-10 w-10 place-items-center rounded-[14px] bg-[#c9b6ff]"><Shield className="h-4 w-4" /></button>}<button onClick={signOut} className="grid h-10 w-10 place-items-center rounded-[14px] bg-[#141b34] text-white"><LogOut className="h-4 w-4" /></button></div>
+      </header>
 
-      {categoryConfig && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
-            <CategoryIcon className="w-3.5 h-3.5" />
-            {categoryConfig.name}
-          </div>
-          {storeUrl && (
-            <button onClick={() => window.open(storeUrl, '_blank')} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-muted transition-colors">
-              <Globe className="w-3 h-3" /> Store <ExternalLink className="w-2.5 h-2.5" />
-            </button>
-          )}
-        </div>
-      )}
+      <section className="relative min-h-[380px] overflow-hidden rounded-[36px] bg-gradient-to-br from-[#ff6848] via-[#ff7f5e] to-[#ffad63] p-7 text-white shadow-[0_26px_65px_rgba(255,93,59,.22)] md:p-10 lg:min-h-[420px]">
+        <div className="relative z-10 max-w-xl"><span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-2 text-[10px] font-black uppercase tracking-[.17em] backdrop-blur-xl"><Sparkles className="h-3.5 w-3.5" /> Business pulse</span><h2 className="mt-6 font-display text-[clamp(3rem,6vw,6.2rem)] font-black leading-[.82] tracking-[-.08em]">Make today<br />count.</h2><p className="mt-6 max-w-md text-sm leading-6 text-white/75">Sales, stock, customers and every important module—one joyful command center.</p><div className="mt-8 flex flex-wrap gap-3"><button onClick={() => navigate('/billing')} className="flex items-center gap-2 rounded-2xl bg-[#141b34] px-5 py-4 text-sm font-extrabold shadow-xl"><ScanLine className="h-4 w-4 text-[#c9f26a]" /> Start a bill</button><button onClick={() => navigate('/workspace')} className="flex items-center gap-2 rounded-2xl border border-white/50 bg-white/20 px-5 py-4 text-sm font-extrabold backdrop-blur-xl"><PackageCheck className="h-4 w-4" /> Manage stock</button></div></div>
+        <motion.img src="/images/dashboard-clay.png" alt="Colorful retail analytics dashboard" className="absolute -bottom-[8%] -right-[14%] w-[76%] max-w-[820px] drop-shadow-[0_32px_45px_rgba(20,27,52,.28)] md:-right-[8%] md:w-[64%]" animate={reduceMotion ? undefined : { y: [0, -13, 0], rotate: [0, 1, 0] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }} />
+      </section>
 
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard title="Today Sales" value={`₹${stats.todaySales.toLocaleString()}`} icon={IndianRupee} trend={stats.todaySales > 0 ? 'Live' : 'No sales'} trendUp={stats.todaySales > 0} gradient />
-        <StatCard title="Monthly Sales" value={`₹${(stats.monthlySales / 1000).toFixed(1)}K`} icon={TrendingUp} trend="This month" />
-        <StatCard title={categoryConfig?.navLabel.workspace === 'Services' ? 'Services' : categoryConfig?.navLabel.workspace === 'Menu' ? 'Menu Items' : 'Products'} value={stats.totalProducts.toString()} icon={Package} />
-        <StatCard title="Low Stock" value={stats.lowStock.toString()} icon={AlertTriangle} trend={stats.lowStock > 0 ? 'Attention' : 'Good'} />
-      </div>
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">{cards.map((card, index) => { const Icon = card.icon; return <motion.article key={card.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .05 }} whileHover={{ y: -5 }} className={`rounded-[27px] p-5 shadow-[0_14px_38px_rgba(20,27,52,.07)] ${card.color}`}><div className="flex items-start justify-between"><p className="text-[10px] font-black uppercase tracking-[.13em] opacity-60">{card.label}</p><Icon className="h-5 w-5 opacity-70" /></div><p className="mt-7 font-display text-3xl font-black tracking-[-.055em] md:text-4xl">{card.value}</p><p className="mt-1 text-[11px] font-bold opacity-55">{card.note}</p></motion.article>; })}</section>
 
-      {/* WhatsApp & Share row */}
-      {storeUrl && (
-        <div className="flex gap-2">
-          <motion.button whileTap={{ scale: 0.95 }} onClick={handleWhatsAppShare}
-            className="flex-1 py-2.5 rounded-xl bg-success/10 text-success text-xs font-semibold flex items-center justify-center gap-2">
-            <MessageCircle className="w-4 h-4" /> Share on WhatsApp
-          </motion.button>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => { navigator.clipboard.writeText(storeUrl); toast({ title: 'Link copied!' }); }}
-            className="py-2.5 px-4 rounded-xl bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-2">
-            <Share2 className="w-4 h-4" /> Copy Link
-          </motion.button>
-        </div>
-      )}
-      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4">
-        {[
-          { label: categoryConfig?.navLabel.customers || 'Customers', value: stats.totalCustomers, icon: Users, color: 'text-success' },
-          { label: 'Invoices', value: stats.totalInvoices, icon: Receipt, color: 'text-primary' },
-          { label: 'Active Offers', value: stats.activeOffers, icon: Tag, color: 'text-warning' },
-        ].map(s => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} className="min-w-[120px] rounded-2xl glass-card shadow-soft p-3 space-y-1">
-              <Icon className={`w-4 h-4 ${s.color}`} />
-              <p className="text-lg font-bold font-display text-foreground">{s.value}</p>
-              <p className="text-[10px] text-muted-foreground">{s.label}</p>
-            </div>
-          );
-        })}
-      </div>
+      <section className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]">
+        <div className="rounded-[32px] border border-white/80 bg-white/72 p-5 shadow-[0_18px_48px_rgba(20,27,52,.07)] backdrop-blur-2xl md:p-7"><div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.16em] text-[#7050db]">7-day movement</p><h3 className="mt-1 font-display text-2xl font-black tracking-[-.045em]">Revenue rhythm</h3></div><span className="grid h-11 w-11 place-items-center rounded-[16px] bg-[#c9b6ff]"><WalletCards className="h-5 w-5" /></span></div><div className="mt-5 h-64"><ResponsiveContainer width="100%" height="100%"><AreaChart data={revenue}><defs><linearGradient id="dash-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ff5d3b" stopOpacity=".38" /><stop offset="1" stopColor="#ff5d3b" stopOpacity="0" /></linearGradient></defs><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#8b8f9d' }} /><Tooltip contentStyle={{ border: 0, borderRadius: 16, boxShadow: '0 16px 40px rgba(20,27,52,.14)' }} /><Area type="monotone" dataKey="revenue" stroke="#ff5d3b" strokeWidth={4} fill="url(#dash-fill)" /></AreaChart></ResponsiveContainer></div></div>
+        <div className="relative min-h-[330px] overflow-hidden rounded-[32px] bg-[#141b34] text-white"><img src="/images/shop-team.webp" alt="Indian retail team managing inventory" className="absolute inset-0 h-full w-full object-cover opacity-55" /><div className="absolute inset-0 bg-gradient-to-t from-[#141b34] via-[#141b34]/25 to-transparent" /><div className="absolute inset-x-6 bottom-6"><p className="text-[10px] font-black uppercase tracking-[.16em] text-[#c9f26a]">Built for teams</p><h3 className="mt-2 font-display text-3xl font-black leading-[.95] tracking-[-.05em]">Clear for everyone at the counter.</h3></div></div>
+      </section>
 
-      {revenueData.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl glass-card shadow-soft p-4">
-          <h2 className="text-sm font-semibold mb-4 text-foreground">Revenue This Week</h2>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData}>
-                <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} /><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient></defs>
-                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.15} />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', fontSize: '12px' }} />
-                <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#revGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      )}
-
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-4">
-        {getQuickActions().map(item => {
-          const Icon = item.icon;
-          return (
-            <button key={item.label} onClick={() => item.path.startsWith('/store') ? window.open(item.path, '_blank') : navigate(item.path)}
-              className="p-4 rounded-2xl glass-card shadow-soft text-left hover:shadow-elevated transition-shadow">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2"><Icon className="w-5 h-5 text-primary" /></div>
-              <p className="text-sm font-semibold text-foreground">{item.label}</p>
-              <p className="text-xs text-muted-foreground">{item.desc}</p>
-            </button>
-          );
-        })}
-      </motion.div>
+      <section><div className="mb-4 flex items-end justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.16em] text-[#ff5d3b]">Daily tools</p><h3 className="mt-1 font-display text-3xl font-black tracking-[-.05em]">Important modules</h3></div><button onClick={() => navigate('/modules')} className="flex items-center gap-1 text-xs font-extrabold">View all <ArrowUpRight className="h-4 w-4" /></button></div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">{modules.map((item, index) => { const Icon = item.icon; return <motion.button key={item.path} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * .04 }} whileHover={{ y: -6 }} onClick={() => navigate(item.path)} className="rounded-[25px] border border-white/80 bg-white/72 p-4 text-left shadow-[0_12px_34px_rgba(20,27,52,.06)] backdrop-blur-xl"><span className={`grid h-11 w-11 place-items-center rounded-[16px] ${item.color}`}><Icon className="h-5 w-5" /></span><p className="mt-5 font-display text-base font-black tracking-[-.03em]">{item.label}</p><p className="mt-0.5 text-[10px] font-bold text-[#8b8f9d]">{item.sub}</p><p className="mt-4 text-xs font-black text-[#ff5d3b]">{item.value}</p></motion.button>; })}</div></section>
     </div>
   );
 };
-
 export default Dashboard;

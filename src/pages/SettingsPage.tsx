@@ -170,17 +170,6 @@ const SettingsPage = () => {
         ],
       },
       {
-        title: language === 'hi' ? 'मॉड्यूल' : 'MODULES',
-        items: [
-          { nav: '/offers', icon: Tag, label: t('nav.offers'), desc: 'Discount campaigns' },
-          { nav: '/customers', icon: Users, label: t('nav.customers'), desc: 'CRM and analytics' },
-          { nav: '/history', icon: Receipt, label: t('nav.history'), desc: 'All past invoices' },
-          { nav: '/expenses', icon: TrendingDown, label: t('nav.expenses'), desc: 'Track expenses' },
-          { nav: '/credit-ledger', icon: CreditCard, label: t('nav.credit'), desc: 'Udhar / Credit' },
-          { key: 'reviews' as SettingsPanel, icon: MessageSquare, label: 'Reviews', desc: 'Approve reviews' },
-        ],
-      },
-      {
         title: language === 'hi' ? 'खाता' : 'ACCOUNT',
         items: [
           { key: 'profile' as SettingsPanel, icon: User, label: 'Profile', desc: user?.email || 'Name & contact' },
@@ -431,9 +420,9 @@ const SettingsPage = () => {
   return (
     <>
       {/* ===== DESKTOP LAYOUT ===== */}
-      <div className="hidden lg:flex h-screen bg-background lg:ml-20">
+      <div className="hidden h-screen bg-transparent lg:ml-20 lg:flex">
         {/* Desktop Top Bar */}
-        <div className="fixed top-0 left-20 right-0 h-16 bg-card border-b border-border z-30 flex items-center px-6">
+        <div className="fixed left-20 right-0 top-0 z-30 flex h-16 items-center border-b border-white/70 bg-white/72 px-6 shadow-[0_10px_32px_rgba(20,27,52,.05)] backdrop-blur-2xl">
           <div className="flex items-center gap-3 flex-1">
             {business?.logo_url ? (
               <img src={business.logo_url.startsWith('http') ? business.logo_url : supabase.storage.from('product-images').getPublicUrl(business.logo_url).data.publicUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
@@ -460,7 +449,7 @@ const SettingsPage = () => {
         </div>
 
         {/* Desktop Sidebar */}
-        <aside className="w-60 bg-card border-r border-border pt-16 overflow-y-auto shrink-0">
+        <aside className="w-60 shrink-0 overflow-y-auto border-r border-white/70 bg-white/62 pt-16 backdrop-blur-2xl">
           <div className="p-3 space-y-4">
             {business?.store_slug && (
               <div className="rounded-xl bg-primary/5 p-3 space-y-1.5">
@@ -505,6 +494,13 @@ const SettingsPage = () => {
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="lg:hidden px-4 pt-4 max-w-4xl mx-auto space-y-6 pb-24">
         <PageHeader title={t('nav.settings')} backTo="/dashboard" />
+
+        <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#141b34] to-[#273154] p-6 text-white shadow-[0_18px_46px_rgba(20,27,52,.2)]">
+          <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#c9f26a]">Your control room</p>
+          <h2 className="mt-3 font-display text-3xl font-black tracking-[-.05em]">Settings, simplified.</h2>
+          <p className="mt-3 max-w-sm text-xs leading-5 text-white/55">Only account, devices, appearance and business configuration live here. Daily tools are now in Modules.</p>
+          <Settings className="absolute -bottom-7 -right-5 h-28 w-28 rotate-12 text-white/10" />
+        </section>
 
         {business?.store_slug && (
           <div className="rounded-2xl glass-card shadow-soft p-4 flex items-center gap-3">

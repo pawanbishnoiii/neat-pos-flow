@@ -132,8 +132,28 @@
 }
 
 .zen-landing .font-display,
-.zen-auth .font-display {
+.zen-auth .font-display,
+.zen-app-shell .font-display {
   font-family: 'Bricolage Grotesque', sans-serif;
+}
+
+.zen-app-shell {
+  font-family: 'Manrope', sans-serif;
+}
+
+.zen-app-shell .glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 14px 38px rgba(20, 27, 52, 0.07);
+}
+
+.dark .zen-app-shell {
+  background: #0e1222;
+}
+
+.dark .zen-app-shell .glass-card {
+  background: rgba(24, 29, 48, 0.78);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 @media (prefers-reduced-motion: reduce) {
